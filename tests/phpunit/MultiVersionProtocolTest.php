@@ -19,7 +19,13 @@ use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\network\mcpe\protocol\types\ScorePacketEntry;
 use pocketmine\network\mcpe\protocol\types\ScoreboardIdentityPacketEntry;
 use pocketmine\network\mcpe\protocol\types\SubChunkPosition;
+use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryCommon;
+use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryWithCache;
+use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryWithCacheList;
+use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryWithoutCache;
+use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryWithoutCacheList;
 use pocketmine\network\mcpe\protocol\types\SubChunkPositionOffset;
+use pocketmine\network\mcpe\protocol\types\SubChunkRequestResult;
 use pocketmine\network\mcpe\protocol\types\IntGameRule;
 use pocketmine\network\mcpe\protocol\types\inventory\FullContainerName;
 use pocketmine\network\mcpe\protocol\types\inventory\CreativeGroupEntry;
@@ -457,6 +463,22 @@ final class MultiVersionProtocolTest extends TestCase{
 			$decoded->decode(new ByteBufferReader(self::encodePacket($packet, $protocolId)), $protocolId);
 			self::assertSame(3, $decoded->getBasePosition()->getX());
 			self::assertSame(-1, $decoded->getEntries()[0]->getZOffset());
+		}
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testSubChunkRoundTrip(int $protocolId) : void{
+		foreach([false, true] as $cacheEnabled){
+			$base = new SubChunkPacketEntryCommon(new SubChunkPositionOffset(1, 0, -1), SubChunkRequestResult::SUCCESS, 'terrain', null, null);
+			$entries = $cacheEnabled
+				? new SubChunkPacketEntryWithCacheList([new SubChunkPacketEntryWithCache($base, 17)])
+				: new SubChunkPacketEntryWithoutCacheList([new SubChunkPacketEntryWithoutCache($base)]);
+			$packet = SubChunkPacket::create(0, new SubChunkPosition(3, 4, -2), $entries);
+			$decoded = new SubChunkPacket();
+			$decoded->decode(new ByteBufferReader(self::encodePacket($packet, $protocolId)), $protocolId);
+			self::assertSame($cacheEnabled, $decoded->isCacheEnabled());
+			self::assertSame(3, $decoded->getBaseSubChunkPosition()->getX());
+			self::assertSame('terrain', $decoded->getEntries()->getEntries()[0]->getBase()->getTerrainData());
 		}
 	}
 }
