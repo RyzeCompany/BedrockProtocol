@@ -74,7 +74,7 @@ class NetworkInventoryAction{
 	 * @throws DataDecodeException
 	 * @throws PacketDecodeException
 	 */
-	public function readAuthInput(ByteBufferReader $in) : NetworkInventoryAction{
+	public function readAuthInput(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : NetworkInventoryAction{
 		$this->sourceType = VarInt::readUnsignedInt($in);
 
 		switch($this->sourceType){
@@ -94,13 +94,13 @@ class NetworkInventoryAction{
 		}
 
 		$this->inventorySlot = VarInt::readUnsignedInt($in);
-		$this->oldItem = CommonTypes::getItemStackWrapper($in);
-		$this->newItem = CommonTypes::getItemStackWrapper($in);
+		$this->oldItem = CommonTypes::getItemStackWrapper($in, $protocolId);
+		$this->newItem = CommonTypes::getItemStackWrapper($in, $protocolId);
 
 		return $this;
 	}
 
-	public function writeAuthInput(ByteBufferWriter $out) : void{
+	public function writeAuthInput(ByteBufferWriter $out, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		VarInt::writeUnsignedInt($out, $this->sourceType);
 
 		switch($this->sourceType){
@@ -129,8 +129,8 @@ class NetworkInventoryAction{
 		}
 
 		VarInt::writeUnsignedInt($out, $this->inventorySlot);
-		CommonTypes::putItemStackWrapper($out, $this->oldItem);
-		CommonTypes::putItemStackWrapper($out, $this->newItem);
+		CommonTypes::putItemStackWrapper($out, $this->oldItem, $protocolId);
+		CommonTypes::putItemStackWrapper($out, $this->newItem, $protocolId);
 	}
 
 	/**
@@ -141,7 +141,7 @@ class NetworkInventoryAction{
 	 */
 	public function readTransaction(ByteBufferReader $in, int $protocolId) : NetworkInventoryAction{
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_26_20){
-			return $this->readAuthInput($in);
+			return $this->readAuthInput($in, $protocolId);
 		}
 
 		$this->sourceType = VarInt::readUnsignedInt($in);
@@ -173,7 +173,7 @@ class NetworkInventoryAction{
 	 */
 	public function writeTransaction(ByteBufferWriter $out, int $protocolId) : void{
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_26_20){
-			$this->writeAuthInput($out);
+			$this->writeAuthInput($out, $protocolId);
 			return;
 		}
 

@@ -99,7 +99,7 @@ final class ShapelessRecipe extends RecipeWithTypeId{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 				$unlockingRequirement = CommonTypes::readOptional($in, static fn(ByteBufferReader $in) => RecipeUnlockingRequirement::read($in, $protocolId));
 			}else{
-				$unlockingRequirement = RecipeUnlockingRequirement::read($in);
+				$unlockingRequirement = RecipeUnlockingRequirement::read($in, $protocolId);
 			}
 		}
 
@@ -127,7 +127,7 @@ final class ShapelessRecipe extends RecipeWithTypeId{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 				CommonTypes::writeOptional($out, $this->unlockingRequirement, static fn(ByteBufferWriter $out, RecipeUnlockingRequirement $requirement) => $requirement->write($out, $protocolId));
 			}else{
-				$this->unlockingRequirement->write($out);
+				$this->unlockingRequirement->write($out, $protocolId);
 			}
 		}
 

@@ -18,6 +18,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\CraftingDataPacket;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 
@@ -48,13 +49,13 @@ final class FurnaceRecipe extends RecipeWithTypeId{
 		return $this->blockName;
 	}
 
-	public static function decode(int $typeId, ByteBufferReader $in) : self{
+	public static function decode(int $typeId, ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : self{
 		$inputId = VarInt::readSignedInt($in);
 		$inputData = null;
 		if($typeId === CraftingDataPacket::ENTRY_FURNACE_DATA){
 			$inputData = VarInt::readSignedInt($in);
 		}
-		$output = CommonTypes::getItemStackWithoutStackId($in);
+		$output = CommonTypes::getItemStackWithoutStackId($in, $protocolId);
 		$block = CommonTypes::getString($in);
 
 		return new self($typeId, $inputId, $inputData, $output, $block);

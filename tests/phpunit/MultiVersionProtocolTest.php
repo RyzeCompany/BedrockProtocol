@@ -8,11 +8,17 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pocketmine\color\Color;
 use pocketmine\math\Vector2;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\serializer\BitSet;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\ChunkPosition;
+use pocketmine\network\mcpe\protocol\types\DimensionData;
+use pocketmine\network\mcpe\protocol\types\GatheringJoinInfo;
+use pocketmine\network\mcpe\protocol\types\MapDecoration;
+use pocketmine\network\mcpe\protocol\types\MapImage;
 use pocketmine\network\mcpe\protocol\types\entity\IntMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
@@ -49,6 +55,8 @@ use pocketmine\network\mcpe\protocol\types\skin\PersonaSkinPiece;
 use pocketmine\network\mcpe\protocol\types\skin\SkinAnimation;
 use pocketmine\network\mcpe\protocol\types\skin\SkinData;
 use pocketmine\network\mcpe\protocol\types\skin\SkinImage;
+use pocketmine\network\mcpe\protocol\types\sound\SoundDataEvent;
+use pocketmine\network\mcpe\protocol\types\SystemCategory;
 use Ramsey\Uuid\Uuid;
 
 final class MultiVersionProtocolTest extends TestCase{
@@ -62,10 +70,27 @@ final class MultiVersionProtocolTest extends TestCase{
 		];
 	}
 
-	private static function encodePacket(DataPacket $packet, int $protocolId) : string{
+	private static function encodePacket(DataPacket $packet, int $protocolId, ?string $gameVersion = null) : string{
 		$out = new ByteBufferWriter();
-		$packet->encode($out, $protocolId);
+		$packet->encode($out, $protocolId, $gameVersion);
 		return $out->getData();
+	}
+
+	/** @return array<string, array{int, string}> */
+	public static function concreteGameVersions() : array{
+		return [
+			'26.30' => [ProtocolInfo::PROTOCOL_1_26_30, '1.26.30'],
+			'26.40' => [ProtocolInfo::PROTOCOL_1_26_40, '1.26.40'],
+			'26.44' => [ProtocolInfo::PROTOCOL_1_26_40, '1.26.44'],
+			'26.45' => [ProtocolInfo::PROTOCOL_1_26_45, '1.26.45']
+		];
+	}
+
+	public function testSupportedProtocolsRetainLegacyClientsAndAdvertise2645() : void{
+		self::assertContains(ProtocolInfo::PROTOCOL_1_20_0, ProtocolInfo::ACCEPTED_PROTOCOL);
+		self::assertContains(ProtocolInfo::PROTOCOL_1_26_30, ProtocolInfo::ACCEPTED_PROTOCOL);
+		self::assertContains(ProtocolInfo::PROTOCOL_1_26_40, ProtocolInfo::ACCEPTED_PROTOCOL);
+		self::assertContains(ProtocolInfo::PROTOCOL_1_26_45, ProtocolInfo::ACCEPTED_PROTOCOL);
 	}
 
 	public function testDoubleOptionalWireFormat() : void{
@@ -391,6 +416,269 @@ final class MultiVersionProtocolTest extends TestCase{
 				self::assertSame('line', $decoded->entries[0]->customName);
 			}
 		}
+	}
+
+	#[DataProvider('concreteGameVersions')]
+	public function testScoreboardFakePlayerExactWireFormat(int $protocolId, string $gameVersion) : void{
+		$entry = new ScorePacketEntry();
+		$entry->scoreboardId = 12;
+		$entry->objectiveName = 'objective';
+		$entry->score = 7;
+		$entry->type = ScorePacketEntry::TYPE_FAKE_PLAYER;
+		$entry->customName = 'line';
+		$packet = SetScorePacket::create(SetScorePacket::TYPE_CHANGE, [$entry]);
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? '6c0103106368616e676566616b65706c6179657218096f626a65637469766507000000046c696e65'
+			: '6c000118096f626a6563746976650700000003046c696e65';
+		$encoded = self::encodePacket($packet, $protocolId, $gameVersion);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new SetScorePacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId, $gameVersion);
+		self::assertSame('objective', $decoded->entries[0]->objectiveName);
+		self::assertSame('line', $decoded->entries[0]->customName);
+	}
+
+	#[DataProvider('concreteGameVersions')]
+	public function testScoreboardRemovalExactWireFormat(int $protocolId, string $gameVersion) : void{
+		$entry = new ScorePacketEntry();
+		$entry->scoreboardId = 12;
+		$entry->objectiveName = 'objective';
+		$entry->score = 7;
+		$entry->type = ScorePacketEntry::TYPE_FAKE_PLAYER;
+		$packet = SetScorePacket::create(SetScorePacket::TYPE_REMOVE, [$entry]);
+		$expected = match($gameVersion){
+			'1.26.30' => '6c010118096f626a65637469766507000000',
+			'1.26.44' => '6c01000672656d6f7665180101096f626a656374697665',
+			default => '6c01000672656d6f76651801096f626a656374697665'
+		};
+		$encoded = self::encodePacket($packet, $protocolId, $gameVersion);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new SetScorePacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId, $gameVersion);
+		self::assertSame('objective', $decoded->entries[0]->objectiveName);
+	}
+
+	public function testHotfix44ScoreboardContextDoesNotLeakAcrossClients() : void{
+		$entry = new ScorePacketEntry();
+		$entry->scoreboardId = 12;
+		$entry->objectiveName = 'objective';
+		$entry->score = 0;
+		$entry->type = ScorePacketEntry::TYPE_FAKE_PLAYER;
+		$packet = SetScorePacket::create(SetScorePacket::TYPE_REMOVE, [$entry]);
+		$hotfix = self::encodePacket($packet, ProtocolInfo::PROTOCOL_1_26_40, '1.26.44');
+		$base = self::encodePacket($packet, ProtocolInfo::PROTOCOL_1_26_40, '1.26.40');
+		$nextProtocol = self::encodePacket($packet, ProtocolInfo::PROTOCOL_1_26_45, '1.26.45');
+		self::assertNotSame($hotfix, $base);
+		self::assertSame($base, $nextProtocol);
+		self::assertSame($base, self::encodePacket($packet, ProtocolInfo::PROTOCOL_1_26_40));
+	}
+
+	public function testHotfix44MissingScoreboardObjectiveUsesOuterNull() : void{
+		$entry = new ScorePacketEntry();
+		$entry->scoreboardId = 12;
+		$entry->objectiveName = '';
+		$entry->score = 0;
+		$entry->type = ScorePacketEntry::TYPE_FAKE_PLAYER;
+		$packet = SetScorePacket::create(SetScorePacket::TYPE_REMOVE, [$entry]);
+		foreach(['1.26.40', '1.26.44'] as $gameVersion){
+			$encoded = self::encodePacket($packet, ProtocolInfo::PROTOCOL_1_26_40, $gameVersion);
+			self::assertSame('6c01000672656d6f76651800', bin2hex($encoded));
+			$decoded = new SetScorePacket();
+			$decoded->decode(new ByteBufferReader($encoded), ProtocolInfo::PROTOCOL_1_26_40, $gameVersion);
+			self::assertSame('', $decoded->entries[0]->objectiveName);
+		}
+	}
+
+	#[DataProvider('concreteGameVersions')]
+	public function testLegacyHcfScoreboardConstructionDefaultsToChange(int $protocolId, string $gameVersion) : void{
+		$entry = new ScorePacketEntry();
+		$entry->scoreboardId = 0;
+		$entry->objectiveName = 'player';
+		$entry->score = 0;
+		$entry->type = ScorePacketEntry::TYPE_FAKE_PLAYER;
+		$entry->customName = 'line';
+		$packet = new SetScorePacket();
+		$packet->entries = [$entry];
+		$encoded = self::encodePacket($packet, $protocolId, $gameVersion);
+		$decoded = new SetScorePacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId, $gameVersion);
+		self::assertSame(SetScorePacket::TYPE_CHANGE, $decoded->type);
+		self::assertSame('line', $decoded->entries[0]->customName);
+	}
+
+	#[DataProvider('concreteGameVersions')]
+	public function testModernMovementDeltaExactWireFormat(int $protocolId, string $gameVersion) : void{
+		$packet = new MoveActorDeltaPacket();
+		$packet->actorRuntimeId = 7;
+		$packet->flags = MoveActorDeltaPacket::FLAG_HAS_X | MoveActorDeltaPacket::FLAG_GROUND;
+		$packet->xPos = 1.5;
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? '6f07010000c03f000000000001000000'
+			: '6f0741000000c03f';
+		$encoded = self::encodePacket($packet, $protocolId, $gameVersion);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new MoveActorDeltaPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId, $gameVersion);
+		self::assertSame($packet->flags, $decoded->flags);
+		self::assertSame(1.5, $decoded->xPos);
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testDimensionDefinitionPackIdExactWireFormat(int $protocolId) : void{
+		$data = new DimensionData(256, -64, 1, 0);
+		$out = new ByteBufferWriter();
+		$data->write($out, $protocolId);
+		$expected = '80047f0200' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? str_repeat('00', 16) : '');
+		self::assertSame($expected, bin2hex($out->getData()));
+		$decoded = DimensionData::read(new ByteBufferReader($out->getData()), $protocolId);
+		self::assertSame(256, $decoded->getMaxHeight());
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			self::assertSame('00000000-0000-0000-0000-000000000000', $decoded->getPackId()?->toString());
+		}else{
+			self::assertNull($decoded->getPackId());
+		}
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testTransferGatheringsOptionalExactWireFormat(int $protocolId) : void{
+		$packet = TransferPacket::create('host', 19132, true);
+		$expected = '5504686f7374bc4a01' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '00' : '');
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new TransferPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		self::assertSame('host', $decoded->address);
+		self::assertNull($decoded->gatheringsConfig);
+	}
+
+	public function testModernGatheringOptionalFieldsPreserveAbsentValues() : void{
+		$out = new ByteBufferWriter();
+		CommonTypes::putUUID($out, Uuid::fromString(Uuid::NIL));
+		CommonTypes::putString($out, 'experience');
+		CommonTypes::putBool($out, false);
+		CommonTypes::putBool($out, false);
+		CommonTypes::putString($out, 'creator');
+		CommonTypes::putBool($out, false);
+		CommonTypes::putBool($out, false);
+		CommonTypes::putBool($out, false);
+		$expected = $out->getData();
+		$decoded = GatheringJoinInfo::read(new ByteBufferReader($expected), ProtocolInfo::PROTOCOL_1_26_40);
+		self::assertSame(Uuid::NIL, $decoded->getExperienceWorldId()->toString());
+		self::assertSame('', $decoded->getScenarioId());
+		$encoded = new ByteBufferWriter();
+		$decoded->write($encoded, ProtocolInfo::PROTOCOL_1_26_40);
+		self::assertSame(bin2hex($expected), bin2hex($encoded->getData()));
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testEmptyMapUpdateExactWireFormat(int $protocolId) : void{
+		$packet = new ClientboundMapItemDataPacket();
+		$packet->mapId = 7;
+		$packet->origin = new BlockPosition(0, 0, 0);
+		$packet->scale = 0;
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? '430e0000000000' . str_repeat('00', 9)
+			: '430e000000000000';
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new ClientboundMapItemDataPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		self::assertSame(7, $decoded->mapId);
+		self::assertSame([], $decoded->decorations);
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testMapDecorationsAndPixelsRoundTrip(int $protocolId) : void{
+		$packet = new ClientboundMapItemDataPacket();
+		$packet->mapId = 7;
+		$packet->origin = new BlockPosition(0, 0, 0);
+		$packet->scale = 2;
+		$packet->parentMapIds = [3];
+		$packet->decorations = [new MapDecoration(1, 2, 3, 4, 'marker', new Color(5, 6, 7, 8))];
+		$packet->colors = new MapImage([[new Color(9, 10, 11, 12)]]);
+		$packet->xOffset = 1;
+		$packet->yOffset = 2;
+		$decoded = new ClientboundMapItemDataPacket();
+		$decoded->decode(new ByteBufferReader(self::encodePacket($packet, $protocolId)), $protocolId);
+		self::assertSame([3], $decoded->parentMapIds);
+		self::assertSame('marker', $decoded->decorations[0]->getLabel());
+		self::assertSame($packet->decorations[0]->getColor()->toARGB(), $decoded->decorations[0]->getColor()->toARGB());
+		self::assertNotNull($decoded->colors);
+		self::assertSame($packet->colors->getPixels()[0][0]->toARGB(), $decoded->colors->getPixels()[0][0]->toARGB());
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testPlaySoundLoopCountExactWireFormat(int $protocolId) : void{
+		$packet = PlaySoundPacket::create('test', 0, 0, 0, 1, 1, null, 2);
+		$expected = '5604746573740000000000803f0000803f' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '0400' : '00');
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new PlaySoundPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		self::assertSame($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? 2 : 0, $decoded->loopCount);
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testAnvilDamageModernFieldRemovalExactWireFormat(int $protocolId) : void{
+		$packet = AnvilDamagePacket::create(new BlockPosition(1, 2, 3), 5);
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '8d01020406' : '8d0105020406';
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new AnvilDamagePacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		self::assertSame($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? 0 : 5, $decoded->getDamageAmount());
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testPlayerLocationVariantExactWireFormat(int $protocolId) : void{
+		$packet = PlayerLocationPacket::createHide(7);
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? 'c6020e0102' : 'c602010000000e';
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new PlayerLocationPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		self::assertSame(7, $decoded->getActorUniqueId());
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testPlayerEntityOverrideVariantExactWireFormat(int $protocolId) : void{
+		$packet = PlayerUpdateEntityOverridesPacket::createIntOverride(7, 2, 300);
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? 'c5020e02020e736574696e746f766572726964652c010000'
+			: 'c5020702022c010000';
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new PlayerUpdateEntityOverridesPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		self::assertSame(7, $decoded->getActorUniqueId());
+		self::assertSame(300, $decoded->getIntOverrideValue());
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testSoundUpdateEventVariantExactWireFormat(int $protocolId) : void{
+		$packet = ClientboundUpdateSoundDataPacket::create(3, 'legacy', SoundDataEvent::stop());
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? 'dc0203000000000000000100000000000000000000'
+			: 'dc020300000000000000066c6567616379';
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertSame($expected, bin2hex($encoded));
+		$decoded = new ClientboundUpdateSoundDataPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			self::assertNotNull($decoded->getStopEvent());
+		}else{
+			self::assertSame('legacy', $decoded->getSoundEvent());
+		}
+	}
+
+	#[DataProvider('protocolVersions')]
+	public function testSystemDiagnosticsCategoriesVersioned(int $protocolId) : void{
+		$packet = ServerboundDiagnosticsPacket::create(1, 2, 3, 4, 5, 6, 7, 8, 9, [], [], [], [], [new SystemCategory('tick', 4)]);
+		$encoded = self::encodePacket($packet, $protocolId);
+		self::assertStringEndsWith($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '00000001047469636b040000000000000000' : '00000000', bin2hex($encoded));
+		$decoded = new ServerboundDiagnosticsPacket();
+		$decoded->decode(new ByteBufferReader($encoded), $protocolId);
+		self::assertCount($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? 1 : 0, $decoded->getSystemCategories());
 	}
 
 	#[DataProvider('protocolVersions')]

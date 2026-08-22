@@ -37,7 +37,7 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 		3 => "changefakeplayer"
 	];
 
-	public int $type;
+	public int $type = self::TYPE_CHANGE;
 	/** @var ScorePacketEntry[] */
 	public array $entries = [];
 
