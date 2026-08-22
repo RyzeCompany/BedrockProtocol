@@ -17,6 +17,7 @@ namespace pocketmine\network\mcpe\protocol\types\inventory;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 final class CreativeGroupEntry{
@@ -32,16 +33,16 @@ final class CreativeGroupEntry{
 
 	public function getIcon() : ItemStack{ return $this->icon; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : self{
 		$categoryId = LE::readSignedInt($in);
 		$categoryName = CommonTypes::getString($in);
-		$icon = CommonTypes::getItemStackWithoutStackId($in);
+		$icon = CommonTypes::getItemStackWithoutStackId($in, $protocolId);
 		return new self($categoryId, $categoryName, $icon);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		LE::writeSignedInt($out, $this->categoryId);
 		CommonTypes::putString($out, $this->categoryName);
-		CommonTypes::putItemStackWithoutStackId($out, $this->icon);
+		CommonTypes::putItemStackWithoutStackId($out, $this->icon, $protocolId);
 	}
 }

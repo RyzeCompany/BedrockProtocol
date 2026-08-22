@@ -51,7 +51,9 @@ class SkinData{
 		private bool $persona = false,
 		private bool $personaCapeOnClassic = false,
 		private bool $isPrimaryUser = true,
-		private bool $override = true
+		private bool $override = true,
+		private ?string $trustedSkinFlag = null,
+		private string $profileHash = ""
 	){
 		$this->capeImage = $capeImage ?? new SkinImage(0, 0, "");
 		//this has to be unique or the client will do stupid things
@@ -141,6 +143,14 @@ class SkinData{
 
 	public function isVerified() : bool{
 		return $this->isVerified;
+	}
+
+	public function getTrustedSkinFlag() : string{
+		return $this->trustedSkinFlag ?? ($this->isVerified ? "true" : "false");
+	}
+
+	public function getProfileHash() : string{
+		return $this->profileHash;
 	}
 
 	/**

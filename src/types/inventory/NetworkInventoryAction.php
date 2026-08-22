@@ -157,8 +157,13 @@ class NetworkInventoryAction{
 		$this->sourceFlags = CommonTypes::readOptional($in, VarInt::readUnsignedInt(...));
 
 		$this->inventorySlot = VarInt::readUnsignedInt($in);
-		$this->oldItem = CommonTypes::getNetworkItemStackDescriptor($in);
-		$this->newItem = CommonTypes::getNetworkItemStackDescriptor($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->oldItem = CommonTypes::getItemStackWrapper($in, $protocolId);
+			$this->newItem = CommonTypes::getItemStackWrapper($in, $protocolId);
+		}else{
+			$this->oldItem = CommonTypes::getNetworkItemStackDescriptor($in);
+			$this->newItem = CommonTypes::getNetworkItemStackDescriptor($in);
+		}
 
 		return $this;
 	}
@@ -181,7 +186,12 @@ class NetworkInventoryAction{
 		CommonTypes::writeOptional($out, $this->sourceFlags, VarInt::writeUnsignedInt(...));
 
 		VarInt::writeUnsignedInt($out, $this->inventorySlot);
-		CommonTypes::putNetworkItemStackDescriptor($out, $this->oldItem);
-		CommonTypes::putNetworkItemStackDescriptor($out, $this->newItem);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::putItemStackWrapper($out, $this->oldItem, $protocolId);
+			CommonTypes::putItemStackWrapper($out, $this->newItem, $protocolId);
+		}else{
+			CommonTypes::putNetworkItemStackDescriptor($out, $this->oldItem);
+			CommonTypes::putNetworkItemStackDescriptor($out, $this->newItem);
+		}
 	}
 }

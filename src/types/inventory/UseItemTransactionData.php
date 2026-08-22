@@ -101,7 +101,9 @@ class UseItemTransactionData extends TransactionData{
 			$this->face = VarInt::readSignedInt($in);
 		}
 		$this->hotbarSlot = VarInt::readSignedInt($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->itemInHand = CommonTypes::getItemStackWrapper($in, $protocolId);
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$this->itemInHand = CommonTypes::getNetworkItemStackDescriptor($in);
 		}else{
 			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
@@ -137,7 +139,9 @@ class UseItemTransactionData extends TransactionData{
 			VarInt::writeSignedInt($out, $this->face);
 		}
 		VarInt::writeSignedInt($out, $this->hotbarSlot);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::putItemStackWrapper($out, $this->itemInHand, $protocolId);
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->itemInHand);
 		}else{
 			CommonTypes::putItemStackWrapper($out, $this->itemInHand);

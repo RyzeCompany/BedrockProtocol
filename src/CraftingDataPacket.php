@@ -45,6 +45,17 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	public const ENTRY_SMITHING_TRANSFORM = 8;
 	public const ENTRY_SMITHING_TRIM = 9;
 
+	private const GROUPED_RECIPE_TYPES = [
+		self::ENTRY_SHAPED,
+		self::ENTRY_SHAPELESS,
+		self::ENTRY_MULTI,
+		self::ENTRY_USER_DATA_SHAPELESS,
+		self::ENTRY_SHAPELESS_CHEMISTRY,
+		self::ENTRY_SHAPED_CHEMISTRY,
+		self::ENTRY_SMITHING_TRANSFORM,
+		self::ENTRY_SMITHING_TRIM
+	];
+
 	/** @var RecipeWithTypeId[] */
 	public array $recipesWithTypeIds = [];
 	/** @var PotionTypeRecipe[] */
@@ -73,21 +84,18 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$recipeCount = VarInt::readUnsignedInt($in);
-		$previousType = "none";
-		for($i = 0; $i < $recipeCount; ++$i){
-			$recipeType = VarInt::readSignedInt($in);
-
-			$this->recipesWithTypeIds[] = match($recipeType){
-				self::ENTRY_SHAPELESS, self::ENTRY_USER_DATA_SHAPELESS, self::ENTRY_SHAPELESS_CHEMISTRY => ShapelessRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_SHAPED, self::ENTRY_SHAPED_CHEMISTRY => ShapedRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => FurnaceRecipe::decode($recipeType, $in),
-				self::ENTRY_MULTI => MultiRecipe::decode($recipeType, $in),
-				self::ENTRY_SMITHING_TRANSFORM => SmithingTransformRecipe::decode($recipeType, $in),
-				self::ENTRY_SMITHING_TRIM => SmithingTrimRecipe::decode($recipeType, $in),
-				default => throw new PacketDecodeException("Unhandled recipe type $recipeType (previous was $previousType)"),
-			};
-			$previousType = $recipeType;
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			foreach(self::GROUPED_RECIPE_TYPES as $recipeType){
+				for($i = 0, $recipeCount = VarInt::readUnsignedInt($in); $i < $recipeCount; ++$i){
+					$this->recipesWithTypeIds[] = self::decodeRecipe($in, $recipeType, $protocolId);
+				}
+			}
+		}else{
+			$recipeCount = VarInt::readUnsignedInt($in);
+			for($i = 0; $i < $recipeCount; ++$i){
+				$recipeType = VarInt::readSignedInt($in);
+				$this->recipesWithTypeIds[] = self::decodeRecipe($in, $recipeType, $protocolId);
+			}
 		}
 		for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; ++$i){
 			$inputId = VarInt::readSignedInt($in);
@@ -119,10 +127,31 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		VarInt::writeUnsignedInt($out, count($this->recipesWithTypeIds));
-		foreach($this->recipesWithTypeIds as $d){
-			VarInt::writeSignedInt($out, $d->getTypeId());
-			$d->encode($out, $protocolId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			/** @var array<int, list<RecipeWithTypeId>> $groups */
+			$groups = [];
+			foreach(self::GROUPED_RECIPE_TYPES as $type){
+				$groups[$type] = [];
+			}
+			foreach($this->recipesWithTypeIds as $recipe){
+				$type = $recipe->getTypeId();
+				if(!isset($groups[$type])){
+					throw new \InvalidArgumentException("Recipe type $type is unsupported by protocol $protocolId");
+				}
+				$groups[$type][] = $recipe;
+			}
+			foreach($groups as $recipes){
+				VarInt::writeUnsignedInt($out, count($recipes));
+				foreach($recipes as $recipe){
+					$recipe->encode($out, $protocolId);
+				}
+			}
+		}else{
+			VarInt::writeUnsignedInt($out, count($this->recipesWithTypeIds));
+			foreach($this->recipesWithTypeIds as $recipe){
+				VarInt::writeSignedInt($out, $recipe->getTypeId());
+				$recipe->encode($out, $protocolId);
+			}
 		}
 		VarInt::writeUnsignedInt($out, count($this->potionTypeRecipes));
 		foreach($this->potionTypeRecipes as $recipe){
@@ -149,6 +178,18 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 			}
 		}
 		CommonTypes::putBool($out, $this->cleanRecipes);
+	}
+
+	private static function decodeRecipe(ByteBufferReader $in, int $recipeType, int $protocolId) : RecipeWithTypeId{
+		return match($recipeType){
+			self::ENTRY_SHAPELESS, self::ENTRY_USER_DATA_SHAPELESS, self::ENTRY_SHAPELESS_CHEMISTRY => ShapelessRecipe::decode($recipeType, $in, $protocolId),
+			self::ENTRY_SHAPED, self::ENTRY_SHAPED_CHEMISTRY => ShapedRecipe::decode($recipeType, $in, $protocolId),
+			self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => FurnaceRecipe::decode($recipeType, $in),
+			self::ENTRY_MULTI => MultiRecipe::decode($recipeType, $in),
+			self::ENTRY_SMITHING_TRANSFORM => SmithingTransformRecipe::decode($recipeType, $in, $protocolId),
+			self::ENTRY_SMITHING_TRIM => SmithingTrimRecipe::decode($recipeType, $in, $protocolId),
+			default => throw new PacketDecodeException("Unhandled recipe type $recipeType"),
+		};
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

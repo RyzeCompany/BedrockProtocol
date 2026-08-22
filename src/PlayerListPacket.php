@@ -60,10 +60,26 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$this->type = Byte::readUnsigned($in);
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+			$this->type = Byte::readUnsigned($in);
+		}else{
+			$this->type = self::TYPE_ADD;
+		}
 		$count = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $count; ++$i){
 			$entry = new PlayerListEntry();
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$outerType = VarInt::readUnsignedInt($in);
+				$innerType = Byte::readUnsigned($in);
+				if(($outerType !== 0 && $outerType !== 1) || $innerType !== 1 - $outerType){
+					throw new PacketDecodeException("Unexpected player list entry type $outerType/$innerType");
+				}
+				$entryType = $outerType === 1 ? self::TYPE_ADD : self::TYPE_REMOVE;
+				if($i > 0 && $entryType !== $this->type){
+					throw new PacketDecodeException("Mixed player list entry types are not supported");
+				}
+				$this->type = $entryType;
+			}
 
 			if($this->type === self::TYPE_ADD){
 				$entry->uuid = CommonTypes::getUUID($in);
@@ -72,7 +88,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 				$entry->xboxUserId = CommonTypes::getString($in);
 				$entry->platformChatId = CommonTypes::getString($in);
 				$entry->buildPlatform = LE::readSignedInt($in);
-				$entry->skinData = CommonTypes::getSkin($in);
+				$entry->skinData = CommonTypes::getSkin($in, $protocolId);
 				$entry->isTeacher = CommonTypes::getBool($in);
 				$entry->isHost = CommonTypes::getBool($in);
 				if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
@@ -87,7 +103,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 
 			$this->entries[$i] = $entry;
 		}
-		if($this->type === self::TYPE_ADD){
+		if($this->type === self::TYPE_ADD && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
 			for($i = 0; $i < $count; ++$i){
 				$this->entries[$i]->skinData->setVerified(CommonTypes::getBool($in));
 			}
@@ -95,9 +111,16 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		Byte::writeUnsigned($out, $this->type);
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+			Byte::writeUnsigned($out, $this->type);
+		}
 		VarInt::writeUnsignedInt($out, count($this->entries));
 		foreach($this->entries as $entry){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$outerType = $this->type === self::TYPE_ADD ? 1 : 0;
+				VarInt::writeUnsignedInt($out, $outerType);
+				Byte::writeUnsigned($out, 1 - $outerType);
+			}
 			if($this->type === self::TYPE_ADD){
 				CommonTypes::putUUID($out, $entry->uuid);
 				CommonTypes::putActorUniqueId($out, $entry->actorUniqueId);
@@ -105,7 +128,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 				CommonTypes::putString($out, $entry->xboxUserId);
 				CommonTypes::putString($out, $entry->platformChatId);
 				LE::writeSignedInt($out, $entry->buildPlatform);
-				CommonTypes::putSkin($out, $entry->skinData);
+				CommonTypes::putSkin($out, $entry->skinData, $protocolId);
 				CommonTypes::putBool($out, $entry->isTeacher);
 				CommonTypes::putBool($out, $entry->isHost);
 				if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
@@ -118,7 +141,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 				CommonTypes::putUUID($out, $entry->uuid);
 			}
 		}
-		if($this->type === self::TYPE_ADD){
+		if($this->type === self::TYPE_ADD && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
 			foreach($this->entries as $entry){
 				CommonTypes::putBool($out, $entry->skinData->isVerified());
 			}
