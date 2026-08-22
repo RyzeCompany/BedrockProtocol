@@ -286,10 +286,24 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		$this->moveVecX = LE::readFloat($in);
 		$this->moveVecZ = LE::readFloat($in);
 		$this->headYaw = LE::readFloat($in);
-		$this->inputFlags = BitSet::read($in, $protocolId >= ProtocolInfo::PROTOCOL_1_21_50 ? PlayerAuthInputFlags::NUMBER_OF_FLAGS : 64);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::readDummyOptional($in);
+			$this->inputFlags = new BitSet(PlayerAuthInputFlags::NUMBER_OF_FLAGS_1_26_40);
+			foreach(CommonTypes::readList($in, VarInt::readSignedInt(...)) as $flag){
+				if($flag < 0 || $flag >= PlayerAuthInputFlags::NUMBER_OF_FLAGS_1_26_40){
+					throw new PacketDecodeException("Invalid player input flag $flag");
+				}
+				if($this->inputFlags->get($flag)){
+					throw new PacketDecodeException("Duplicate player input flag $flag");
+				}
+				$this->inputFlags->set($flag, true);
+			}
+		}else{
+			$this->inputFlags = BitSet::read($in, $protocolId >= ProtocolInfo::PROTOCOL_1_21_50 ? PlayerAuthInputFlags::NUMBER_OF_FLAGS : 64);
+		}
 		$this->inputMode = VarInt::readUnsignedInt($in);
 		$this->playMode = VarInt::readUnsignedInt($in);
-		$this->interactionMode = VarInt::readUnsignedInt($in);
+		$this->interactionMode = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? VarInt::readSignedInt($in) : VarInt::readUnsignedInt($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_40){
 			$this->interactRotation = CommonTypes::getVector2($in);
 		}elseif($this->playMode === PlayMode::VR){
@@ -297,13 +311,32 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		}
 		$this->tick = VarInt::readUnsignedLong($in);
 		$this->delta = CommonTypes::getVector3($in);
-		if($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_INTERACTION)){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->itemInteractionData = CommonTypes::readDoubleOptional($in, ItemInteractionData::read(...));
+			$this->itemStackRequest = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId));
+			$this->blockActions = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
+				$actionType = VarInt::readSignedInt($in);
+				if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
+					throw new PacketDecodeException("Unexpected block action type $actionType");
+				}
+				return PlayerBlockActionWithBlockInfo::read($in, $actionType);
+			}));
+			$vehicleRotation = CommonTypes::readDoubleOptional($in, CommonTypes::getVector2(...));
+			$vehicleActorUniqueId = CommonTypes::readDoubleOptional($in, CommonTypes::getActorUniqueId(...));
+			if($vehicleRotation !== null && $vehicleActorUniqueId !== null){
+				$this->vehicleInfo = new PlayerAuthInputVehicleInfo($vehicleRotation->x, $vehicleRotation->y, $vehicleActorUniqueId);
+			}elseif($vehicleRotation !== null || $vehicleActorUniqueId !== null){
+				throw new PacketDecodeException("Vehicle rotation and actor unique ID must both be present or absent");
+			}else{
+				$this->vehicleInfo = null;
+			}
+		}elseif($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_INTERACTION)){
 			$this->itemInteractionData = ItemInteractionData::read($in);
 		}
-		if($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_STACK_REQUEST)){
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_STACK_REQUEST)){
 			$this->itemStackRequest = ItemStackRequest::read($in, $protocolId);
 		}
-		if($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_BLOCK_ACTIONS)){
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->inputFlags->get(PlayerAuthInputFlags::PERFORM_BLOCK_ACTIONS)){
 			$this->blockActions = [];
 			$max = VarInt::readSignedInt($in);
 			for($i = 0; $i < $max; ++$i){
@@ -315,7 +348,7 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 				};
 			}
 		}
-		if($this->inputFlags->get(PlayerAuthInputFlags::IN_CLIENT_PREDICTED_VEHICLE) && $protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->inputFlags->get(PlayerAuthInputFlags::IN_CLIENT_PREDICTED_VEHICLE) && $protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
 			$this->vehicleInfo = PlayerAuthInputVehicleInfo::read($in, $protocolId);
 		}
 		$this->analogMoveVecX = LE::readFloat($in);
@@ -341,10 +374,25 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		LE::writeFloat($out, $this->moveVecX);
 		LE::writeFloat($out, $this->moveVecZ);
 		LE::writeFloat($out, $this->headYaw);
-		$this->inputFlags->write($out, $protocolId >= ProtocolInfo::PROTOCOL_1_21_50 ? PlayerAuthInputFlags::NUMBER_OF_FLAGS : 64);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeDummyOptional($out);
+			$flags = [];
+			for($i = 0; $i < $this->inputFlags->getLength(); ++$i){
+				if($this->inputFlags->get($i)){
+					$flags[] = $i;
+				}
+			}
+			CommonTypes::writeList($out, $flags, VarInt::writeSignedInt(...));
+		}else{
+			$this->inputFlags->write($out, $protocolId >= ProtocolInfo::PROTOCOL_1_21_50 ? PlayerAuthInputFlags::NUMBER_OF_FLAGS : 64);
+		}
 		VarInt::writeUnsignedInt($out, $this->inputMode);
 		VarInt::writeUnsignedInt($out, $this->playMode);
-		VarInt::writeUnsignedInt($out, $this->interactionMode);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			VarInt::writeSignedInt($out, $this->interactionMode);
+		}else{
+			VarInt::writeUnsignedInt($out, $this->interactionMode);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_40){
 			CommonTypes::putVector2($out, $this->interactRotation);
 		}elseif($this->playMode === PlayMode::VR){
@@ -353,20 +401,36 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		}
 		VarInt::writeUnsignedLong($out, $this->tick);
 		CommonTypes::putVector3($out, $this->delta);
-		if($this->itemInteractionData !== null){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeDoubleOptional($out, $this->itemInteractionData, static fn(ByteBufferWriter $out, ItemInteractionData $data) => $data->write($out));
+			CommonTypes::writeDoubleOptional($out, $this->itemStackRequest, static fn(ByteBufferWriter $out, ItemStackRequest $request) => $request->write($out, $protocolId));
+			CommonTypes::writeDoubleOptional($out, $this->blockActions, static fn(ByteBufferWriter $out, array $actions) => CommonTypes::writeList($out, $actions, static function(ByteBufferWriter $out, PlayerBlockAction $action) : void{
+				if(!$action instanceof PlayerBlockActionWithBlockInfo){
+					throw new \InvalidArgumentException("Protocol 26.40+ block actions require block position and face");
+				}
+				VarInt::writeSignedInt($out, $action->getActionType());
+				$action->write($out);
+			}));
+			$vehicleRotation = $this->vehicleInfo === null ? null : new Vector2(
+				$this->vehicleInfo->getVehicleRotationX() ?? throw new \InvalidArgumentException("Vehicle rotation X is missing"),
+				$this->vehicleInfo->getVehicleRotationZ() ?? throw new \InvalidArgumentException("Vehicle rotation Z is missing")
+			);
+			CommonTypes::writeDoubleOptional($out, $vehicleRotation, CommonTypes::putVector2(...));
+			CommonTypes::writeDoubleOptional($out, $this->vehicleInfo?->getPredictedVehicleActorUniqueId(), CommonTypes::putActorUniqueId(...));
+		}elseif($this->itemInteractionData !== null){
 			$this->itemInteractionData->write($out);
 		}
-		if($this->itemStackRequest !== null){
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->itemStackRequest !== null){
 			$this->itemStackRequest->write($out, $protocolId);
 		}
-		if($this->blockActions !== null){
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->blockActions !== null){
 			VarInt::writeSignedInt($out, count($this->blockActions));
 			foreach($this->blockActions as $blockAction){
 				VarInt::writeSignedInt($out, $blockAction->getActionType());
 				$blockAction->write($out);
 			}
 		}
-		if($this->vehicleInfo !== null && $protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->vehicleInfo !== null && $protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
 			$this->vehicleInfo->write($out, $protocolId);
 		}
 		LE::writeFloat($out, $this->analogMoveVecX);

@@ -21,7 +21,9 @@ use pmmp\encoding\DataDecodeException;
 use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use function array_search;
 use function count;
 
 final class ItemStackRequest{
@@ -84,7 +86,16 @@ final class ItemStackRequest{
 		$requestId = CommonTypes::readItemStackRequestId($in);
 		$actions = [];
 		for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
-			$typeId = Byte::readUnsigned($in);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$outerTypeId = VarInt::readUnsignedInt($in);
+				$typeId = Byte::readUnsigned($in);
+				$expectedTypeId = ItemStackRequestActionType::INNER_TYPES_1_26_40[$outerTypeId] ?? null;
+				if($expectedTypeId === null || $expectedTypeId !== $typeId){
+					throw new PacketDecodeException("ItemStackRequestAction type mismatch: outer type $outerTypeId, inner type $typeId");
+				}
+			}else{
+				$typeId = Byte::readUnsigned($in);
+			}
 			$actions[] = self::readAction($in, $protocolId, $typeId);
 		}
 		$filterStrings = [];
@@ -99,7 +110,15 @@ final class ItemStackRequest{
 		CommonTypes::writeItemStackRequestId($out, $this->requestId);
 		VarInt::writeUnsignedInt($out, count($this->actions));
 		foreach($this->actions as $action){
-			Byte::writeUnsigned($out, $action->getTypeId());
+			$typeId = $action->getTypeId();
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$outerTypeId = array_search($typeId, ItemStackRequestActionType::INNER_TYPES_1_26_40, true);
+				if($outerTypeId === false){
+					throw new \InvalidArgumentException("Item stack request action type $typeId is unsupported by protocol $protocolId");
+				}
+				VarInt::writeUnsignedInt($out, $outerTypeId);
+			}
+			Byte::writeUnsigned($out, $typeId);
 			$action->write($out, $protocolId);
 		}
 		VarInt::writeUnsignedInt($out, count($this->filterStrings));

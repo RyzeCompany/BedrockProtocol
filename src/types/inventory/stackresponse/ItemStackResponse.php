@@ -18,6 +18,7 @@ use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use function count;
 
@@ -51,6 +52,17 @@ final class ItemStackResponse{
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$result = Byte::readUnsigned($in);
 		$requestId = CommonTypes::readItemStackRequestId($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$containerInfos = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList(
+				$in,
+				static fn(ByteBufferReader $in) => ItemStackResponseContainerInfo::read($in, $protocolId)
+			));
+			if($result !== self::RESULT_OK && $containerInfos !== null){
+				throw new \InvalidArgumentException("Container infos must be null if rejecting the request");
+			}
+			return new self($result, $requestId, $containerInfos ?? []);
+		}
+
 		$containerInfos = [];
 		if($result === self::RESULT_OK){
 			for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
@@ -63,6 +75,16 @@ final class ItemStackResponse{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		Byte::writeUnsigned($out, $this->result);
 		CommonTypes::writeItemStackRequestId($out, $this->requestId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$containerInfos = $this->result === self::RESULT_OK ? $this->containerInfos : null;
+			CommonTypes::writeDoubleOptional($out, $containerInfos, static fn(ByteBufferWriter $out, array $list) => CommonTypes::writeList(
+				$out,
+				$list,
+				static fn(ByteBufferWriter $out, ItemStackResponseContainerInfo $info) => $info->write($out, $protocolId)
+			));
+			return;
+		}
+
 		if($this->result === self::RESULT_OK){
 			VarInt::writeUnsignedInt($out, count($this->containerInfos));
 			foreach($this->containerInfos as $containerInfo){

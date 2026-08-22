@@ -103,6 +103,23 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
 			$this->dimensionId = VarInt::readSignedInt($in);
 		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->subChunkCount = VarInt::readUnsignedInt($in);
+			$subChunkRequestLimit = CommonTypes::readOptional($in, VarInt::readSignedInt(...));
+			$this->clientSubChunkRequestsEnabled = $subChunkRequestLimit !== null;
+			$cacheEnabled = CommonTypes::getBool($in);
+			$count = VarInt::readUnsignedInt($in);
+			if($count > self::MAX_BLOB_HASHES){
+				throw new PacketDecodeException("Expected at most " . self::MAX_BLOB_HASHES . " blob hashes, got " . $count);
+			}
+			$blobHashes = [];
+			for($i = 0; $i < $count; ++$i){
+				$blobHashes[] = LE::readUnsignedLong($in);
+			}
+			$this->usedBlobHashes = $cacheEnabled ? $blobHashes : null;
+			$this->extraPayload = CommonTypes::getString($in);
+			return;
+		}
 
 		$subChunkCountButNotReally = VarInt::readUnsignedInt($in);
 		if($subChunkCountButNotReally === self::CLIENT_REQUEST_FULL_COLUMN_FAKE_COUNT){
@@ -134,6 +151,20 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 		$this->chunkPosition->write($out);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
 			VarInt::writeSignedInt($out, $this->dimensionId);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$subChunkCount = $this->subChunkCount === PHP_INT_MAX ? 0 : $this->subChunkCount;
+			VarInt::writeUnsignedInt($out, $subChunkCount);
+			$subChunkRequestLimit = $this->clientSubChunkRequestsEnabled ? $subChunkCount : null;
+			CommonTypes::writeOptional($out, $subChunkRequestLimit, VarInt::writeSignedInt(...));
+			CommonTypes::putBool($out, $this->usedBlobHashes !== null);
+			$blobHashes = $this->usedBlobHashes ?? [];
+			VarInt::writeUnsignedInt($out, count($blobHashes));
+			foreach($blobHashes as $hash){
+				LE::writeUnsignedLong($out, $hash);
+			}
+			CommonTypes::putString($out, $this->extraPayload);
+			return;
 		}
 
 		if($this->clientSubChunkRequestsEnabled){

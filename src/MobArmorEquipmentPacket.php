@@ -47,7 +47,7 @@ class MobArmorEquipmentPacket extends DataPacket implements ClientboundPacket, S
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30 && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
 			$this->head = CommonTypes::getNetworkItemStackDescriptor($in);
 			$this->chest = CommonTypes::getNetworkItemStackDescriptor($in);
 			$this->legs = CommonTypes::getNetworkItemStackDescriptor($in);
@@ -66,7 +66,7 @@ class MobArmorEquipmentPacket extends DataPacket implements ClientboundPacket, S
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30 && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->head);
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->chest);
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->legs);

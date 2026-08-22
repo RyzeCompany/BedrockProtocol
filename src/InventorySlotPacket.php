@@ -49,7 +49,11 @@ class InventorySlotPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->windowId = VarInt::readUnsignedInt($in);
 		$this->inventorySlot = VarInt::readUnsignedInt($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->containerName = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => FullContainerName::read($in, $protocolId));
+			$this->storage = CommonTypes::readOptional($in, CommonTypes::getItemStackWrapper(...));
+			$this->item = CommonTypes::getItemStackWrapper($in);
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			$this->containerName = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => FullContainerName::read($in, $protocolId));
 			$this->storage = CommonTypes::readOptional($in, CommonTypes::getNetworkItemStackDescriptor(...));
 			$this->item = CommonTypes::getNetworkItemStackDescriptor($in);
@@ -71,7 +75,11 @@ class InventorySlotPacket extends DataPacket implements ClientboundPacket{
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeUnsignedInt($out, $this->windowId);
 		VarInt::writeUnsignedInt($out, $this->inventorySlot);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->containerName, fn(ByteBufferWriter $out, FullContainerName $v) => $v->write($out, $protocolId));
+			CommonTypes::writeOptional($out, $this->storage, CommonTypes::putItemStackWrapper(...));
+			CommonTypes::putItemStackWrapper($out, $this->item);
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			CommonTypes::writeOptional($out, $this->containerName, fn(ByteBufferWriter $out, FullContainerName $v) => $v->write($out, $protocolId));
 			CommonTypes::writeOptional($out, $this->storage, CommonTypes::putNetworkItemStackDescriptor(...));
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->item);

@@ -28,7 +28,7 @@
             "pocketmine\\network\\mcpe\\protocol\\": "tests/phpunit/"
         }
     },
-    "license": "LGPL-3.0",
+	"license": "LGPL-3.0-or-later",
     "config": {
         "sort-packages": true
     },

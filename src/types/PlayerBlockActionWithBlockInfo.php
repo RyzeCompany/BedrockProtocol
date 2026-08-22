@@ -28,7 +28,7 @@ final class PlayerBlockActionWithBlockInfo implements PlayerBlockAction{
 		private BlockPosition $blockPosition,
 		private int $face
 	){
-		if(!self::isValidActionType($actionType)){
+		if(!self::isValidActionType($actionType, true)){
 			throw new \InvalidArgumentException("Invalid action type for " . self::class);
 		}
 	}
@@ -50,8 +50,9 @@ final class PlayerBlockActionWithBlockInfo implements PlayerBlockAction{
 		VarInt::writeSignedInt($out, $this->face);
 	}
 
-	public static function isValidActionType(int $actionType) : bool{
+	public static function isValidActionType(int $actionType, bool $includeStopBreak = false) : bool{
 		return match($actionType){
+			PlayerAction::STOP_BREAK => $includeStopBreak,
 			PlayerAction::ABORT_BREAK,
 			PlayerAction::START_BREAK,
 			PlayerAction::CRACK_BREAK,
