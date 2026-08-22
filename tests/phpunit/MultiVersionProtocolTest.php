@@ -248,6 +248,37 @@ final class MultiVersionProtocolTest extends TestCase{
 		self::assertSame(0, $decoded->getItems()[0]->getItem()->getId());
 	}
 
+	#[DataProvider('concreteGameVersions')]
+	public function testCreativeGroupCategoryUsesVersionSpecificWireWidth(int $protocolId, string $gameVersion) : void{
+		$out = new ByteBufferWriter();
+		(new CreativeGroupEntry(1, 'group', ItemStack::null()))->write($out, $protocolId);
+
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? '010567726f7570000000000000'
+			: '010000000567726f757000';
+		self::assertSame($expected, bin2hex($out->getData()), "Unexpected creative group wire format for $gameVersion");
+	}
+
+	#[DataProvider('concreteGameVersions')]
+	public function testCreativeContentCanBeReadByTheClientWireFormat(int $protocolId, string $gameVersion) : void{
+		$packet = CreativeContentPacket::create([new CreativeGroupEntry(1, 'group', ItemStack::null())], [new CreativeItemEntry(2, ItemStack::null(), 0)]);
+		$reader = new ByteBufferReader(self::encodePacket($packet, $protocolId, $gameVersion));
+		self::assertSame(CreativeContentPacket::NETWORK_ID, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+		self::assertSame(1, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+
+		$category = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? \pmmp\encoding\Byte::readUnsigned($reader)
+			: \pmmp\encoding\LE::readSignedInt($reader);
+		self::assertSame(1, $category);
+		self::assertSame('group', CommonTypes::getString($reader), "Creative group fields became misaligned for $gameVersion");
+		self::assertSame(0, CommonTypes::getItemStackWithoutStackId($reader, $protocolId)->getId());
+		self::assertSame(1, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+		self::assertSame(2, CommonTypes::readCreativeItemNetId($reader));
+		self::assertSame(0, CommonTypes::getItemStackWithoutStackId($reader, $protocolId)->getId());
+		self::assertSame(0, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+		self::assertSame(0, $reader->getUnreadLength());
+	}
+
 	#[DataProvider('protocolVersions')]
 	public function testRecipeIngredientRoundTrip(int $protocolId) : void{
 		$descriptors = [null, new TagItemDescriptor('minecraft:logs')];
