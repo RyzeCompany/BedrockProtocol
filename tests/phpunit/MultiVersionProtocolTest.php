@@ -43,6 +43,8 @@ use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeAut
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\MineBlockStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackresponse\ItemStackResponse;
 use pocketmine\network\mcpe\protocol\types\inventory\stackresponse\ItemStackResponseSlotInfo;
+use pocketmine\network\mcpe\protocol\types\login\clientdata\ClientData;
+use pocketmine\network\mcpe\protocol\types\login\clientdata\ClientDataToSkinDataHelper;
 use pocketmine\network\mcpe\protocol\types\recipe\IntIdMetaItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\RecipeIngredient;
 use pocketmine\network\mcpe\protocol\types\recipe\RecipeUnlockingRequirement;
@@ -196,6 +198,43 @@ final class MultiVersionProtocolTest extends TestCase{
 			'true',
 			'hash'
 		);
+	}
+
+	public function testDefaultSkinGeometryIsValidJsonForModernClients() : void{
+		$skin = new SkinData('skin', '', '{}', new SkinImage(1, 1, "\x01\x02\x03\x04"));
+		self::assertSame('{}', $skin->getGeometryData());
+	}
+
+	public function testClientProfileHashAndTrustArePreservedDuringSkinConversion() : void{
+		$client = new ClientData();
+		$client->AnimatedImageData = [];
+		$client->SkinId = 'windows-skin';
+		$client->SkinResourcePatch = base64_encode('{"geometry":{"default":"geometry.humanoid.custom"}}');
+		$client->SkinImageHeight = 1;
+		$client->SkinImageWidth = 1;
+		$client->SkinData = base64_encode("\x01\x02\x03\x04");
+		$client->CapeImageHeight = 0;
+		$client->CapeImageWidth = 0;
+		$client->CapeData = '';
+		$client->SkinGeometryData = base64_encode('{}');
+		$client->SkinGeometryDataEngineVersion = base64_encode('1.26.44');
+		$client->SkinAnimationData = '';
+		$client->CapeId = '';
+		$client->ArmSize = SkinData::ARM_SIZE_WIDE;
+		$client->SkinColor = '#00000000';
+		$client->PersonaPieces = [];
+		$client->PieceTintColors = [];
+		$client->TrustedSkin = false;
+		$client->PremiumSkin = false;
+		$client->PersonaSkin = false;
+		$client->CapeOnClassicSkin = false;
+		$client->OverrideSkin = true;
+		$client->ProfileHash = 'windows-profile-hash';
+
+		$skin = ClientDataToSkinDataHelper::fromClientData($client);
+		self::assertSame('windows-profile-hash', $skin->getProfileHash());
+		self::assertSame('false', $skin->getTrustedSkinFlag());
+		self::assertFalse($skin->isVerified());
 	}
 
 	#[DataProvider('protocolVersions')]

@@ -19,6 +19,8 @@ use Ramsey\Uuid\Uuid;
 
 class SkinData{
 
+	public const GEOMETRY_DATA_NONE = "{}";
+
 	public const ARM_SIZE_SLIM = "slim";
 	public const ARM_SIZE_WIDE = "wide";
 
@@ -37,7 +39,7 @@ class SkinData{
 		private SkinImage $skinImage,
 		private array $animations = [],
 		?SkinImage $capeImage = null,
-		private string $geometryData = "",
+		private string $geometryData = self::GEOMETRY_DATA_NONE,
 		private string $geometryDataEngineVersion = ProtocolInfo::MINECRAFT_VERSION_NETWORK,
 		private string $animationData = "",
 		private string $capeId = "",
