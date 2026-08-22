@@ -22,6 +22,11 @@ use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 
 final class GatheringJoinInfo{
+	private bool $hasExperienceWorldId = true;
+	private bool $hasExperienceWorldName = true;
+	private bool $hasTargetId = true;
+	private bool $hasScenarioId = true;
+	private bool $hasServerId = true;
 
 	public function __construct(
 		private UuidInterface $experienceId,
@@ -53,6 +58,30 @@ final class GatheringJoinInfo{
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$experienceId = CommonTypes::getUUID($in);
 		$experienceName = CommonTypes::getString($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$experienceWorldId = CommonTypes::readOptional($in, CommonTypes::getUUID(...));
+			$experienceWorldName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+			$creatorId = CommonTypes::getString($in);
+			$targetId = CommonTypes::readOptional($in, CommonTypes::getUUID(...));
+			$scenarioId = CommonTypes::readOptional($in, CommonTypes::getString(...));
+			$serverId = CommonTypes::readOptional($in, CommonTypes::getString(...));
+			$result = new self(
+				$experienceId,
+				$experienceName,
+				$experienceWorldId ?? Uuid::fromString(Uuid::NIL),
+				$experienceWorldName ?? "",
+				$creatorId,
+				$targetId ?? Uuid::fromString(Uuid::NIL),
+				$scenarioId ?? "",
+				$serverId ?? ""
+			);
+			$result->hasExperienceWorldId = $experienceWorldId !== null;
+			$result->hasExperienceWorldName = $experienceWorldName !== null;
+			$result->hasTargetId = $targetId !== null;
+			$result->hasScenarioId = $scenarioId !== null;
+			$result->hasServerId = $serverId !== null;
+			return $result;
+		}
 		$experienceWorldId = CommonTypes::getUUID($in);
 		$experienceWorldName = CommonTypes::getString($in);
 		$creatorId = CommonTypes::getString($in);
@@ -77,6 +106,15 @@ final class GatheringJoinInfo{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putUUID($out, $this->experienceId);
 		CommonTypes::putString($out, $this->experienceName);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->hasExperienceWorldId ? $this->experienceWorldId : null, CommonTypes::putUUID(...));
+			CommonTypes::writeOptional($out, $this->hasExperienceWorldName ? $this->experienceWorldName : null, CommonTypes::putString(...));
+			CommonTypes::putString($out, $this->creatorId);
+			CommonTypes::writeOptional($out, $this->hasTargetId ? $this->targetId : null, CommonTypes::putUUID(...));
+			CommonTypes::writeOptional($out, $this->hasScenarioId ? $this->scenarioId : null, CommonTypes::putString(...));
+			CommonTypes::writeOptional($out, $this->hasServerId ? $this->serverId : null, CommonTypes::putString(...));
+			return;
+		}
 		CommonTypes::putUUID($out, $this->experienceWorldId);
 		CommonTypes::putString($out, $this->experienceWorldName);
 		CommonTypes::putString($out, $this->creatorId);

@@ -22,6 +22,7 @@ use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\ScorePacketEntry;
 use function count;
+use function version_compare;
 
 class SetScorePacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::SET_SCORE_PACKET;
@@ -53,9 +54,10 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$isHotfix44 = $this->usesHotfix44Scoreboard($protocolId);
 			$this->entries = [];
 			$this->type = self::TYPE_CHANGE;
-			foreach(CommonTypes::readList($in, static function(ByteBufferReader $in) : array{
+			foreach(CommonTypes::readList($in, static function(ByteBufferReader $in) use ($isHotfix44) : array{
 				$action = VarInt::readUnsignedInt($in);
 				$innerType = CommonTypes::getString($in);
 				if((self::ACTION_TYPES[$action] ?? null) !== $innerType){
@@ -63,8 +65,8 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 				}
 				$entry = new ScorePacketEntry();
 				$entry->scoreboardId = VarInt::readSignedLong($in);
-				$entry->objectiveName = CommonTypes::readOptional($in, CommonTypes::getString(...)) ?? "";
 				if($action !== 0){
+					$entry->objectiveName = CommonTypes::getString($in);
 					$entry->type = $action;
 					$entry->score = LE::readSignedInt($in);
 					if($action === ScorePacketEntry::TYPE_PLAYER || $action === ScorePacketEntry::TYPE_ENTITY){
@@ -73,6 +75,9 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 						$entry->customName = CommonTypes::getString($in);
 					}
 				}else{
+					$entry->objectiveName = $isHotfix44
+						? CommonTypes::readOptional($in, static fn(ByteBufferReader $in) : ?string => CommonTypes::readOptional($in, CommonTypes::getString(...))) ?? ""
+						: CommonTypes::readOptional($in, CommonTypes::getString(...)) ?? "";
 					$entry->score = 0;
 				}
 				return [$action, $entry];
@@ -113,7 +118,8 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			CommonTypes::writeList($out, $this->entries, function(ByteBufferWriter $out, ScorePacketEntry $entry) : void{
+			$isHotfix44 = $this->usesHotfix44Scoreboard($protocolId);
+			CommonTypes::writeList($out, $this->entries, function(ByteBufferWriter $out, ScorePacketEntry $entry) use ($isHotfix44) : void{
 				$action = $this->type === self::TYPE_REMOVE ? 0 : $entry->type;
 				$innerType = self::ACTION_TYPES[$action] ?? null;
 				if($innerType === null){
@@ -122,11 +128,21 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 				VarInt::writeUnsignedInt($out, $action);
 				CommonTypes::putString($out, $innerType);
 				VarInt::writeSignedLong($out, $entry->scoreboardId);
-				CommonTypes::writeOptional($out, $entry->objectiveName, CommonTypes::putString(...));
-				if($action === ScorePacketEntry::TYPE_PLAYER || $action === ScorePacketEntry::TYPE_ENTITY){
+				if($action === 0){
+					$objectiveName = $entry->objectiveName !== "" ? $entry->objectiveName : null;
+					if($isHotfix44){
+						CommonTypes::writeOptional($out, $objectiveName, static function(ByteBufferWriter $out, string $objectiveName) : void{
+							CommonTypes::writeOptional($out, $objectiveName, CommonTypes::putString(...));
+						});
+					}else{
+						CommonTypes::writeOptional($out, $objectiveName, CommonTypes::putString(...));
+					}
+				}elseif($action === ScorePacketEntry::TYPE_PLAYER || $action === ScorePacketEntry::TYPE_ENTITY){
+					CommonTypes::putString($out, $entry->objectiveName);
 					LE::writeSignedInt($out, $entry->score);
 					CommonTypes::putActorUniqueId($out, $entry->actorUniqueId ?? throw new \InvalidArgumentException("Actor unique ID must be set for player and entity scores"));
 				}elseif($action === ScorePacketEntry::TYPE_FAKE_PLAYER){
+					CommonTypes::putString($out, $entry->objectiveName);
 					LE::writeSignedInt($out, $entry->score);
 					CommonTypes::putString($out, $entry->customName ?? throw new \InvalidArgumentException("Custom name must be set for fake player scores"));
 				}
@@ -155,6 +171,14 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 				}
 			}
 		}
+	}
+
+	private function usesHotfix44Scoreboard(int $protocolId) : bool{
+		$gameVersion = $this->getGameVersion();
+		return $protocolId === ProtocolInfo::PROTOCOL_1_26_40 &&
+			$gameVersion !== null &&
+			version_compare($gameVersion, "1.26.44", ">=") &&
+			version_compare($gameVersion, "1.26.45", "<");
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

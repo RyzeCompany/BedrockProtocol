@@ -32,6 +32,7 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 	public const FLAG_GROUND = 0x40;
 	public const FLAG_TELEPORT = 0x80;
 	public const FLAG_FORCE_MOVE_LOCAL_ENTITY = 0x100;
+	public const FLAG_FORCE_COMPLETION = 0x200;
 
 	public int $actorRuntimeId;
 	public int $flags;
@@ -58,8 +59,32 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 		return 0.0;
 	}
 
+	/** @throws DataDecodeException */
+	private function readModernComponent(ByteBufferReader $in, int $flag, bool $rotation = false) : float{
+		$value = CommonTypes::readOptional($in, $rotation ? CommonTypes::getRotationByte(...) : LE::readFloat(...));
+		if($value !== null){
+			$this->flags |= $flag;
+		}
+		return $value ?? 0.0;
+	}
+
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->flags = 0;
+			$this->xPos = $this->readModernComponent($in, self::FLAG_HAS_X);
+			$this->yPos = $this->readModernComponent($in, self::FLAG_HAS_Y);
+			$this->zPos = $this->readModernComponent($in, self::FLAG_HAS_Z);
+			$this->pitch = $this->readModernComponent($in, self::FLAG_HAS_PITCH, true);
+			$this->yaw = $this->readModernComponent($in, self::FLAG_HAS_YAW, true);
+			$this->headYaw = $this->readModernComponent($in, self::FLAG_HAS_HEAD_YAW, true);
+			foreach([self::FLAG_GROUND, self::FLAG_TELEPORT, self::FLAG_FORCE_MOVE_LOCAL_ENTITY, self::FLAG_FORCE_COMPLETION] as $flag){
+				if(CommonTypes::getBool($in)){
+					$this->flags |= $flag;
+				}
+			}
+			return;
+		}
 		$this->flags = LE::readUnsignedShort($in);
 		$this->xPos = $this->maybeReadCoord(self::FLAG_HAS_X, $in);
 		$this->yPos = $this->maybeReadCoord(self::FLAG_HAS_Y, $in);
@@ -81,8 +106,28 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 		}
 	}
 
+	private function writeModernComponent(ByteBufferWriter $out, int $flag, float $value, bool $rotation = false) : void{
+		CommonTypes::writeOptional(
+			$out,
+			($this->flags & $flag) !== 0 ? $value : null,
+			$rotation ? CommonTypes::putRotationByte(...) : LE::writeFloat(...)
+		);
+	}
+
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->writeModernComponent($out, self::FLAG_HAS_X, $this->xPos);
+			$this->writeModernComponent($out, self::FLAG_HAS_Y, $this->yPos);
+			$this->writeModernComponent($out, self::FLAG_HAS_Z, $this->zPos);
+			$this->writeModernComponent($out, self::FLAG_HAS_PITCH, $this->pitch, true);
+			$this->writeModernComponent($out, self::FLAG_HAS_YAW, $this->yaw, true);
+			$this->writeModernComponent($out, self::FLAG_HAS_HEAD_YAW, $this->headYaw, true);
+			foreach([self::FLAG_GROUND, self::FLAG_TELEPORT, self::FLAG_FORCE_MOVE_LOCAL_ENTITY, self::FLAG_FORCE_COMPLETION] as $flag){
+				CommonTypes::putBool($out, ($this->flags & $flag) !== 0);
+			}
+			return;
+		}
 		LE::writeUnsignedShort($out, $this->flags);
 		$this->maybeWriteCoord(self::FLAG_HAS_X, $this->xPos, $out);
 		$this->maybeWriteCoord(self::FLAG_HAS_Y, $this->yPos, $out);

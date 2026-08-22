@@ -20,6 +20,7 @@ use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\DataDecodeException;
 use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
+use pocketmine\color\Color;
 use pocketmine\math\Vector2;
 use pocketmine\math\Vector3;
 use pocketmine\nbt\NbtDataException;
@@ -107,6 +108,15 @@ final class CommonTypes{
 		$bytes = $uuid->getBytes();
 		$out->writeByteArray(strrev(substr($bytes, 0, 8)));
 		$out->writeByteArray(strrev(substr($bytes, 8, 8)));
+	}
+
+	/** @throws DataDecodeException */
+	public static function readColor(ByteBufferReader $in) : Color{
+		return Color::fromARGB(LE::readUnsignedInt($in));
+	}
+
+	public static function writeColor(ByteBufferWriter $out, Color $color) : void{
+		LE::writeUnsignedInt($out, $color->toARGB());
 	}
 
 	/** @throws DataDecodeException */

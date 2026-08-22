@@ -32,6 +32,7 @@ abstract class DataPacket implements Packet{
 
 	public int $senderSubId = 0;
 	public int $recipientSubId = 0;
+	private ?string $gameVersion = null;
 
 	public function pid() : int{
 		return $this::NETWORK_ID;
@@ -48,13 +49,21 @@ abstract class DataPacket implements Packet{
 	/**
 	 * @throws PacketDecodeException
 	 */
-	final public function decode(ByteBufferReader $in, int $protocolId) : void{
+	final public function decode(ByteBufferReader $in, int $protocolId, ?string $gameVersion = null) : void{
+		$previousGameVersion = $this->gameVersion;
+		$this->gameVersion = $gameVersion;
 		try{
 			$this->decodeHeader($in);
 			$this->decodePayload($in, $protocolId);
 		}catch(DataDecodeException | PacketDecodeException $e){
 			throw PacketDecodeException::wrap($e, $this->getName());
+		}finally{
+			$this->gameVersion = $previousGameVersion;
 		}
+	}
+
+	final protected function getGameVersion() : ?string{
+		return $this->gameVersion;
 	}
 
 	/**
@@ -81,9 +90,15 @@ abstract class DataPacket implements Packet{
 	 */
 	abstract protected function decodePayload(ByteBufferReader $in, int $protocolId) : void;
 
-	final public function encode(ByteBufferWriter $out, int $protocolId) : void{
-		$this->encodeHeader($out);
-		$this->encodePayload($out, $protocolId);
+	final public function encode(ByteBufferWriter $out, int $protocolId, ?string $gameVersion = null) : void{
+		$previousGameVersion = $this->gameVersion;
+		$this->gameVersion = $gameVersion;
+		try{
+			$this->encodeHeader($out);
+			$this->encodePayload($out, $protocolId);
+		}finally{
+			$this->gameVersion = $previousGameVersion;
+		}
 	}
 
 	protected function encodeHeader(ByteBufferWriter $out) : void{
