@@ -43,6 +43,8 @@ use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeAut
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\MineBlockStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackresponse\ItemStackResponse;
 use pocketmine\network\mcpe\protocol\types\inventory\stackresponse\ItemStackResponseSlotInfo;
+use pocketmine\network\mcpe\protocol\types\login\clientdata\ClientData;
+use pocketmine\network\mcpe\protocol\types\login\clientdata\ClientDataToSkinDataHelper;
 use pocketmine\network\mcpe\protocol\types\recipe\IntIdMetaItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\RecipeIngredient;
 use pocketmine\network\mcpe\protocol\types\recipe\RecipeUnlockingRequirement;
@@ -198,6 +200,43 @@ final class MultiVersionProtocolTest extends TestCase{
 		);
 	}
 
+	public function testDefaultSkinGeometryIsValidJsonForModernClients() : void{
+		$skin = new SkinData('skin', '', '{}', new SkinImage(1, 1, "\x01\x02\x03\x04"));
+		self::assertSame('{}', $skin->getGeometryData());
+	}
+
+	public function testClientProfileHashAndTrustArePreservedDuringSkinConversion() : void{
+		$client = new ClientData();
+		$client->AnimatedImageData = [];
+		$client->SkinId = 'windows-skin';
+		$client->SkinResourcePatch = base64_encode('{"geometry":{"default":"geometry.humanoid.custom"}}');
+		$client->SkinImageHeight = 1;
+		$client->SkinImageWidth = 1;
+		$client->SkinData = base64_encode("\x01\x02\x03\x04");
+		$client->CapeImageHeight = 0;
+		$client->CapeImageWidth = 0;
+		$client->CapeData = '';
+		$client->SkinGeometryData = base64_encode('{}');
+		$client->SkinGeometryDataEngineVersion = base64_encode('1.26.44');
+		$client->SkinAnimationData = '';
+		$client->CapeId = '';
+		$client->ArmSize = SkinData::ARM_SIZE_WIDE;
+		$client->SkinColor = '#00000000';
+		$client->PersonaPieces = [];
+		$client->PieceTintColors = [];
+		$client->TrustedSkin = false;
+		$client->PremiumSkin = false;
+		$client->PersonaSkin = false;
+		$client->CapeOnClassicSkin = false;
+		$client->OverrideSkin = true;
+		$client->ProfileHash = 'windows-profile-hash';
+
+		$skin = ClientDataToSkinDataHelper::fromClientData($client);
+		self::assertSame('windows-profile-hash', $skin->getProfileHash());
+		self::assertSame('false', $skin->getTrustedSkinFlag());
+		self::assertFalse($skin->isVerified());
+	}
+
 	#[DataProvider('protocolVersions')]
 	public function testSkinRoundTrip(int $protocolId) : void{
 		$out = new ByteBufferWriter();
@@ -246,6 +285,37 @@ final class MultiVersionProtocolTest extends TestCase{
 		$decoded->decode(new ByteBufferReader(self::encodePacket($packet, $protocolId)), $protocolId);
 		self::assertSame(0, $decoded->getGroups()[0]->getIcon()->getId());
 		self::assertSame(0, $decoded->getItems()[0]->getItem()->getId());
+	}
+
+	#[DataProvider('concreteGameVersions')]
+	public function testCreativeGroupCategoryUsesVersionSpecificWireWidth(int $protocolId, string $gameVersion) : void{
+		$out = new ByteBufferWriter();
+		(new CreativeGroupEntry(1, 'group', ItemStack::null()))->write($out, $protocolId);
+
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? '010567726f7570000000000000'
+			: '010000000567726f757000';
+		self::assertSame($expected, bin2hex($out->getData()), "Unexpected creative group wire format for $gameVersion");
+	}
+
+	#[DataProvider('concreteGameVersions')]
+	public function testCreativeContentCanBeReadByTheClientWireFormat(int $protocolId, string $gameVersion) : void{
+		$packet = CreativeContentPacket::create([new CreativeGroupEntry(1, 'group', ItemStack::null())], [new CreativeItemEntry(2, ItemStack::null(), 0)]);
+		$reader = new ByteBufferReader(self::encodePacket($packet, $protocolId, $gameVersion));
+		self::assertSame(CreativeContentPacket::NETWORK_ID, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+		self::assertSame(1, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+
+		$category = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? \pmmp\encoding\Byte::readUnsigned($reader)
+			: \pmmp\encoding\LE::readSignedInt($reader);
+		self::assertSame(1, $category);
+		self::assertSame('group', CommonTypes::getString($reader), "Creative group fields became misaligned for $gameVersion");
+		self::assertSame(0, CommonTypes::getItemStackWithoutStackId($reader, $protocolId)->getId());
+		self::assertSame(1, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+		self::assertSame(2, CommonTypes::readCreativeItemNetId($reader));
+		self::assertSame(0, CommonTypes::getItemStackWithoutStackId($reader, $protocolId)->getId());
+		self::assertSame(0, \pmmp\encoding\VarInt::readUnsignedInt($reader));
+		self::assertSame(0, $reader->getUnreadLength());
 	}
 
 	#[DataProvider('protocolVersions')]
