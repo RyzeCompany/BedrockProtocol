@@ -806,6 +806,15 @@ final class MultiVersionProtocolTest extends TestCase{
 	}
 
 	#[DataProvider('protocolVersions')]
+	public function test2193HeightmapRowsAreLengthPrefixed() : void{
+		$map = new SubChunkPacketHeightMapInfo(array_fill(0, 256, 7));
+		$out = new ByteBufferWriter();
+		$map->write($out, ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame(16 * (1 + 16), strlen($out->getData()));
+		$decoded = SubChunkPacketHeightMapInfo::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame($map->getHeights(), $decoded->getHeights());
+	}
+
 	public function test2193DimensionDataUsesMinYAndHeightRange() : void{
 		$uuid = Uuid::fromString('01020304-0506-0708-090a-0b0c0d0e0f10');
 		$data = new DimensionData(320, -64, 1, 1000, $uuid, 'plains');
