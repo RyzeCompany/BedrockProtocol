@@ -103,7 +103,9 @@ class InventoryTransactionPacket extends DataPacket implements ClientboundPacket
 				}
 			});
 
-			Byte::writeUnsigned($out, 1);
+			if($protocolId < ProtocolInfo::PROTOCOL_1_26_50){
+				Byte::writeUnsigned($out, 1);
+			}
 		}elseif($this->requestId !== 0){
 			VarInt::writeUnsignedInt($out, count($this->requestChangedSlots ?? []));
 			foreach(($this->requestChangedSlots ?? []) as $changedSlots){

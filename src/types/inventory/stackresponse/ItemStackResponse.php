@@ -53,10 +53,15 @@ final class ItemStackResponse{
 		$result = Byte::readUnsigned($in);
 		$requestId = CommonTypes::readItemStackRequestId($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			$containerInfos = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList(
-				$in,
-				static fn(ByteBufferReader $in) => ItemStackResponseContainerInfo::read($in, $protocolId)
-			));
+			$containerInfos = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50
+				? CommonTypes::readOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList(
+					$in,
+					static fn(ByteBufferReader $in) => ItemStackResponseContainerInfo::read($in, $protocolId)
+				))
+				: CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList(
+					$in,
+					static fn(ByteBufferReader $in) => ItemStackResponseContainerInfo::read($in, $protocolId)
+				));
 			if($result !== self::RESULT_OK && $containerInfos !== null){
 				throw new \InvalidArgumentException("Container infos must be null if rejecting the request");
 			}
@@ -77,11 +82,19 @@ final class ItemStackResponse{
 		CommonTypes::writeItemStackRequestId($out, $this->requestId);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$containerInfos = $this->result === self::RESULT_OK ? $this->containerInfos : null;
-			CommonTypes::writeDoubleOptional($out, $containerInfos, static fn(ByteBufferWriter $out, array $list) => CommonTypes::writeList(
-				$out,
-				$list,
-				static fn(ByteBufferWriter $out, ItemStackResponseContainerInfo $info) => $info->write($out, $protocolId)
-			));
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+				CommonTypes::writeOptional($out, $containerInfos, static fn(ByteBufferWriter $out, array $list) => CommonTypes::writeList(
+					$out,
+					$list,
+					static fn(ByteBufferWriter $out, ItemStackResponseContainerInfo $info) => $info->write($out, $protocolId)
+				));
+			}else{
+				CommonTypes::writeDoubleOptional($out, $containerInfos, static fn(ByteBufferWriter $out, array $list) => CommonTypes::writeList(
+					$out,
+					$list,
+					static fn(ByteBufferWriter $out, ItemStackResponseContainerInfo $info) => $info->write($out, $protocolId)
+				));
+			}
 			return;
 		}
 

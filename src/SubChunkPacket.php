@@ -67,7 +67,7 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 			$entries = [];
 			for($i = 0; $i < $count; $i++){
 				if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-					$entry = SubChunkPacketEntry::read($in);
+					$entry = SubChunkPacketEntry::read($in, $protocolId);
 					$hash = $entry->getUsedBlobHash();
 					if($hash === null){
 						throw new PacketDecodeException("Cached subchunk entry has no blob hash");
@@ -82,7 +82,7 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 			$entries = [];
 			for($i = 0; $i < $count; $i++){
 				$entries[] = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
-					? new EntryWithoutBlobHash(self::toLegacyEntry(SubChunkPacketEntry::read($in)))
+					? new EntryWithoutBlobHash(self::toLegacyEntry(SubChunkPacketEntry::read($in, $protocolId)))
 					: EntryWithoutBlobHash::read($in, $protocolId);
 			}
 			$this->entries = new ListWithoutBlobHashes($entries);
@@ -116,7 +116,7 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 					self::getHeightMapType($renderHeightMap, true),
 					self::getHeightMapPayload($renderHeightMap),
 					$cacheEnabled ? $entry->getUsedBlobHash() : null
-				))->write($out);
+				))->write($out, $protocolId);
 			}else{
 				$entry->write($out, $protocolId);
 			}

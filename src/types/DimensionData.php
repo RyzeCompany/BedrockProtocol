@@ -45,8 +45,14 @@ final class DimensionData{
 	public function getDefaultBiome() : string{ return $this->defaultBiome; }
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
-		$maxHeight = VarInt::readSignedInt($in);
-		$minHeight = VarInt::readSignedInt($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			$minHeight = VarInt::readSignedInt($in);
+			$heightRange = VarInt::readSignedInt($in);
+			$maxHeight = $minHeight + $heightRange;
+		}else{
+			$maxHeight = VarInt::readSignedInt($in);
+			$minHeight = VarInt::readSignedInt($in);
+		}
 		$generator = VarInt::readSignedInt($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			$dimensionType = VarInt::readSignedInt($in);
@@ -58,8 +64,13 @@ final class DimensionData{
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
-		VarInt::writeSignedInt($out, $this->maxHeight);
-		VarInt::writeSignedInt($out, $this->minHeight);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			VarInt::writeSignedInt($out, $this->minHeight);
+			VarInt::writeSignedInt($out, $this->maxHeight - $this->minHeight);
+		}else{
+			VarInt::writeSignedInt($out, $this->maxHeight);
+			VarInt::writeSignedInt($out, $this->minHeight);
+		}
 		VarInt::writeSignedInt($out, $this->generator);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			VarInt::writeSignedInt($out, $this->dimensionType);

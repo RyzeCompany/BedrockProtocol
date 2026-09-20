@@ -19,6 +19,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 /**
@@ -60,7 +61,7 @@ final class SubChunkPacketEntry{
 
 	public function getUsedBlobHash() : ?int{ return $this->usedBlobHash; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId = ProtocolInfo::PROTOCOL_1_26_45) : self{
 		$offset = SubChunkPositionOffset::read($in);
 
 		$requestResult = Byte::readUnsigned($in);
@@ -68,7 +69,7 @@ final class SubChunkPacketEntry{
 		$data = CommonTypes::readOptional($in, CommonTypes::getString(...));
 
 		$heightMapType = Byte::readUnsigned($in);
-		$heightMapData = CommonTypes::readOptional($in, SubChunkPacketHeightMapInfo::read(...));
+		$heightMapData = CommonTypes::readOptional($in, static fn(ByteBufferReader $in) => SubChunkPacketHeightMapInfo::read($in, $protocolId));
 		if($heightMapType === SubChunkPacketHeightMapType::DATA && $heightMapData === null){
 			throw new PacketDecodeException("Heightmap data type is DATA but no heightmap data was provided");
 		}
@@ -94,7 +95,7 @@ final class SubChunkPacketEntry{
 		);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId = ProtocolInfo::PROTOCOL_1_26_45) : void{
 		$this->offset->write($out);
 
 		Byte::writeUnsigned($out, $this->requestResult);

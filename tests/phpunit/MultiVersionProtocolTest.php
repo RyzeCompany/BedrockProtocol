@@ -603,10 +603,16 @@ final class MultiVersionProtocolTest extends TestCase{
 		$data = new DimensionData(256, -64, 1, 0);
 		$out = new ByteBufferWriter();
 		$data->write($out, $protocolId);
-		$expected = '80047f0200' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? str_repeat('00', 16) : '');
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50
+			? '7f80050200' . str_repeat('00', 16) . '106d696e6563726166743a706c61696e73'
+			: '80047f0200' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? str_repeat('00', 16) : '');
 		self::assertSame($expected, bin2hex($out->getData()));
 		$decoded = DimensionData::read(new ByteBufferReader($out->getData()), $protocolId);
 		self::assertSame(256, $decoded->getMaxHeight());
+		self::assertSame(-64, $decoded->getMinHeight());
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			self::assertSame('minecraft:plains', $decoded->getDefaultBiome());
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			self::assertSame('00000000-0000-0000-0000-000000000000', $decoded->getPackId()?->toString());
 		}else{
@@ -800,6 +806,37 @@ final class MultiVersionProtocolTest extends TestCase{
 	}
 
 	#[DataProvider('protocolVersions')]
+	public function test2193HeightmapRowsAreLengthPrefixed() : void{
+		$map = new SubChunkPacketHeightMapInfo(array_fill(0, 256, 7));
+		$out = new ByteBufferWriter();
+		$map->write($out, ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame(16 * (1 + 16), strlen($out->getData()));
+		$decoded = SubChunkPacketHeightMapInfo::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame($map->getHeights(), $decoded->getHeights());
+	}
+
+	public function test2193DimensionDataUsesMinYAndHeightRange() : void{
+		$uuid = Uuid::fromString('01020304-0506-0708-090a-0b0c0d0e0f10');
+		$data = new DimensionData(320, -64, 1, 1000, $uuid, 'plains');
+		$out = new ByteBufferWriter();
+		$data->write($out, ProtocolInfo::PROTOCOL_1_26_50);
+		$decoded = DimensionData::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame(320, $decoded->getMaxHeight());
+		self::assertSame(-64, $decoded->getMinHeight());
+		self::assertSame('plains', $decoded->getDefaultBiome());
+	}
+
+	public function test2193ItemStackResponseRemovesDummyOptionalMarker() : void{
+		$response = new ItemStackResponse(ItemStackResponse::RESULT_ERROR, 5);
+		$out = new ByteBufferWriter();
+		$response->write($out, ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame('010500', bin2hex($out->getData()));
+		$decoded = ItemStackResponse::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame(ItemStackResponse::RESULT_ERROR, $decoded->getResult());
+		self::assertSame(5, $decoded->getRequestId());
+		self::assertSame([], $decoded->getContainerInfos());
+	}
+
 	public function testIntegerGameRuleWireFormat(int $protocolId) : void{
 		$rule = new IntGameRule(300, false);
 		$out = new ByteBufferWriter();
