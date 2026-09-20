@@ -17,6 +17,8 @@ namespace pocketmine\network\mcpe\protocol\types;
 use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use function array_fill;
 use function count;
 
@@ -39,17 +41,35 @@ class SubChunkPacketHeightMapInfo{
 		return $this->heights[(($z & 0xf) << 4) | ($x & 0xf)];
 	}
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId = ProtocolInfo::PROTOCOL_1_26_45) : self{
 		$heights = [];
-		for($i = 0; $i < 256; ++$i){
-			$heights[] = Byte::readSigned($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			for($row = 0; $row < 16; ++$row){
+				$length = VarInt::readUnsignedInt($in);
+				for($i = 0; $i < $length; ++$i){
+					$heights[] = Byte::readSigned($in);
+				}
+			}
+		}else{
+			for($i = 0; $i < 256; ++$i){
+				$heights[] = Byte::readSigned($in);
+			}
 		}
 		return new self($heights);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
-		for($i = 0; $i < 256; ++$i){
-			Byte::writeSigned($out, $this->heights[$i]);
+	public function write(ByteBufferWriter $out, int $protocolId = ProtocolInfo::PROTOCOL_1_26_45) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			for($row = 0; $row < 16; ++$row){
+				VarInt::writeUnsignedInt($out, 16);
+				for($column = 0; $column < 16; ++$column){
+					Byte::writeSigned($out, $this->heights[($row * 16) + $column]);
+				}
+			}
+		}else{
+			for($i = 0; $i < 256; ++$i){
+				Byte::writeSigned($out, $this->heights[$i]);
+			}
 		}
 	}
 
