@@ -603,10 +603,16 @@ final class MultiVersionProtocolTest extends TestCase{
 		$data = new DimensionData(256, -64, 1, 0);
 		$out = new ByteBufferWriter();
 		$data->write($out, $protocolId);
-		$expected = '80047f0200' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? str_repeat('00', 16) : '');
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50
+			? '7f80050200' . str_repeat('00', 16) . '106d696e6563726166743a706c61696e73'
+			: '80047f0200' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? str_repeat('00', 16) : '');
 		self::assertSame($expected, bin2hex($out->getData()));
 		$decoded = DimensionData::read(new ByteBufferReader($out->getData()), $protocolId);
 		self::assertSame(256, $decoded->getMaxHeight());
+		self::assertSame(-64, $decoded->getMinHeight());
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			self::assertSame('minecraft:plains', $decoded->getDefaultBiome());
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			self::assertSame('00000000-0000-0000-0000-000000000000', $decoded->getPackId()?->toString());
 		}else{
