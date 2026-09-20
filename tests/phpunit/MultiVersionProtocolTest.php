@@ -800,6 +800,28 @@ final class MultiVersionProtocolTest extends TestCase{
 	}
 
 	#[DataProvider('protocolVersions')]
+	public function test2193DimensionDataUsesMinYAndHeightRange() : void{
+		$uuid = Uuid::fromString('01020304-0506-0708-090a-0b0c0d0e0f10');
+		$data = new DimensionData(320, -64, 1, 1000, $uuid, 'plains');
+		$out = new ByteBufferWriter();
+		$data->write($out, ProtocolInfo::PROTOCOL_1_26_50);
+		$decoded = DimensionData::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame(320, $decoded->getMaxHeight());
+		self::assertSame(-64, $decoded->getMinHeight());
+		self::assertSame('plains', $decoded->getDefaultBiome());
+	}
+
+	public function test2193ItemStackResponseRemovesDummyOptionalMarker() : void{
+		$response = new ItemStackResponse(ItemStackResponse::RESULT_ERROR, 5);
+		$out = new ByteBufferWriter();
+		$response->write($out, ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame('010500', bin2hex($out->getData()));
+		$decoded = ItemStackResponse::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame(ItemStackResponse::RESULT_ERROR, $decoded->getResult());
+		self::assertSame(5, $decoded->getRequestId());
+		self::assertSame([], $decoded->getContainerInfos());
+	}
+
 	public function testIntegerGameRuleWireFormat(int $protocolId) : void{
 		$rule = new IntGameRule(300, false);
 		$out = new ByteBufferWriter();
