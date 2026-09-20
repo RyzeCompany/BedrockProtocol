@@ -798,6 +798,10 @@ trait PacketHandlerDefaultImplTrait{
 		return false;
 	}
 
+	public function handleSetPlayerFurnaceOptions(SetPlayerFurnaceOptionsPacket $packet) : bool{
+		return false;
+	}
+
 	public function handleSetPlayerInventoryOptions(SetPlayerInventoryOptionsPacket $packet) : bool{
 		return false;
 	}
@@ -943,6 +947,10 @@ trait PacketHandlerDefaultImplTrait{
 	}
 
 	public function handleSyncWorldClocks(SyncWorldClocksPacket $packet) : bool{
+		return false;
+	}
+
+	public function handleRecordStarted(RecordStartedPacket $packet) : bool{
 		return false;
 	}
 

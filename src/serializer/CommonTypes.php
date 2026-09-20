@@ -1111,7 +1111,10 @@ final class CommonTypes{
 	 * @phpstan-return T|null
 	 * @throws DataDecodeException
 	 */
-	public static function readDoubleOptional(ByteBufferReader $in, \Closure $reader) : mixed{
+	public static function readDoubleOptional(ByteBufferReader $in, \Closure $reader, bool $contextAware = false) : mixed{
+		if($contextAware){
+			return $reader($in);
+		}
 		self::readDummyOptional($in);
 		return self::readOptional($in, $reader);
 	}
@@ -1121,7 +1124,13 @@ final class CommonTypes{
 	 * @phpstan-param T|null $value
 	 * @phpstan-param \Closure(ByteBufferWriter, T) : void $writer
 	 */
-	public static function writeDoubleOptional(ByteBufferWriter $out, mixed $value, \Closure $writer) : void{
+	public static function writeDoubleOptional(ByteBufferWriter $out, mixed $value, \Closure $writer, bool $contextAware = false) : void{
+		if($contextAware){
+			if($value !== null){
+				$writer($out, $value);
+			}
+			return;
+		}
 		self::writeDummyOptional($out);
 		self::writeOptional($out, $value, $writer);
 	}
@@ -1152,4 +1161,14 @@ final class CommonTypes{
 			$writer($out, $item);
 		}
 	}
+	public static function readContextOptional(ByteBufferReader $in, bool $present, \Closure $reader) : mixed{
+		return $present ? $reader($in) : null;
+	}
+
+	public static function writeContextOptional(ByteBufferWriter $out, mixed $value, bool $present, \Closure $writer) : void{
+		if($present && $value !== null){
+			$writer($out, $value);
+		}
+	}
+
 }

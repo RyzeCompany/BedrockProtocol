@@ -32,7 +32,7 @@ final class ProtocolInfo{
 	 */
 
 	/** Actual Minecraft: PE protocol version */
-	public const CURRENT_PROTOCOL = self::PROTOCOL_1_26_45;
+	public const CURRENT_PROTOCOL = self::PROTOCOL_1_26_51;
 	public const ACCEPTED_PROTOCOL = [
 		self::PROTOCOL_1_20_0,
 		self::PROTOCOL_1_20_10,
@@ -67,10 +67,12 @@ final class ProtocolInfo{
 	];
 
 	/** Display version shown in the server logs. This should match the version on the game's home screen. */
-	public const MINECRAFT_VERSION = 'v26.45';
+	public const MINECRAFT_VERSION = 'v26.51';
 	/** Version sent on the network for client side compatibility checks. This may differ from the display version. */
-	public const MINECRAFT_VERSION_NETWORK = '1.26.45';
+	public const MINECRAFT_VERSION_NETWORK = '1.26.51';
 
+	public const PROTOCOL_1_26_51 = 2193;
+	public const PROTOCOL_1_26_50 = 2193;
 	public const PROTOCOL_1_26_45 = 2169;
 	public const PROTOCOL_1_26_44 = 2168;
 	public const PROTOCOL_1_26_40 = 2168;
@@ -308,6 +310,7 @@ final class ProtocolInfo{
 	public const REFRESH_ENTITLEMENTS_PACKET = 0x131;
 	public const PLAYER_TOGGLE_CRAFTER_SLOT_REQUEST_PACKET = 0x132;
 	public const SET_PLAYER_INVENTORY_OPTIONS_PACKET = 0x133;
+	public const SET_PLAYER_FURNACE_OPTIONS_PACKET = 0x15f;
 	public const SET_HUD_PACKET = 0x134;
 	public const AWARD_ACHIEVEMENT_PACKET = 0x135;
 	public const CLIENTBOUND_CLOSE_FORM_PACKET = 0x136;
@@ -346,6 +349,7 @@ final class ProtocolInfo{
 	public const SERVERBOUND_DATA_DRIVEN_SCREEN_CLOSED_PACKET = 0x157;
 	public const SYNC_WORLD_CLOCKS_PACKET = 0x158;
 	public const CLIENTBOUND_ATTRIBUTE_LAYER_SYNC_PACKET = 0x159;
+	public const RECORD_STARTED_PACKET = 0x160;
 	public const SERVER_STORE_INFO_PACKET = 0x15a;
 	public const SERVER_PRESENCE_INFO_PACKET = 0x15b;
 	public const CLIENTBOUND_UPDATE_SOUND_DATA_PACKET = 0x15c;

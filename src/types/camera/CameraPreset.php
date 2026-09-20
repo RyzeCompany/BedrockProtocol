@@ -53,6 +53,8 @@ final class CameraPreset{
 		private ?bool $alignTargetAndCameraForward,
 		private ?CameraPresetAimAssist $aimAssist,
 		private ?ControlScheme $controlScheme,
+		private bool $applyInheritedStartingRotation = false,
+		private ?Vector2 $startingRotation = null,
 	){}
 
 	public function getName() : string{ return $this->name; }
@@ -100,6 +102,8 @@ final class CameraPreset{
 	public function getAimAssist() : ?CameraPresetAimAssist{ return $this->aimAssist; }
 
 	public function getControlScheme() : ?ControlScheme{ return $this->controlScheme; }
+	public function getApplyInheritedStartingRotation() : bool{ return $this->applyInheritedStartingRotation; }
+	public function getStartingRotation() : ?Vector2{ return $this->startingRotation; }
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$name = CommonTypes::getString($in);
@@ -150,6 +154,13 @@ final class CameraPreset{
 			}
 		}
 
+		$applyInheritedStartingRotation = false;
+		$startingRotation = null;
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			$applyInheritedStartingRotation = CommonTypes::getBool($in);
+			$startingRotation = CommonTypes::getVector2($in);
+		}
+
 		return new self(
 			$name,
 			$parent,
@@ -174,6 +185,8 @@ final class CameraPreset{
 			$alignTargetAndCameraForward ?? null,
 			$aimAssist ?? null,
 			$controlScheme ?? null,
+			$applyInheritedStartingRotation,
+			$startingRotation,
 		);
 	}
 
@@ -257,6 +270,11 @@ final class CameraPreset{
 				}
 			}
 		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			CommonTypes::putBool($out, $this->applyInheritedStartingRotation);
+			CommonTypes::putVector2($out, $this->startingRotation ?? new Vector2(0, 0));
+		}
+
 	}
 
 	public function toNBT(int $protocolId) : CompoundTag{

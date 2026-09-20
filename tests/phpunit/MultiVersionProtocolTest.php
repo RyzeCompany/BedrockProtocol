@@ -68,7 +68,9 @@ final class MultiVersionProtocolTest extends TestCase{
 		return [
 			'26.30' => [ProtocolInfo::PROTOCOL_1_26_30],
 			'26.40' => [ProtocolInfo::PROTOCOL_1_26_40],
-			'26.45' => [ProtocolInfo::PROTOCOL_1_26_45]
+			'26.45' => [ProtocolInfo::PROTOCOL_1_26_45],
+			'26.50' => [ProtocolInfo::PROTOCOL_1_26_50],
+			'26.51' => [ProtocolInfo::PROTOCOL_1_26_51]
 		];
 	}
 
@@ -84,15 +86,18 @@ final class MultiVersionProtocolTest extends TestCase{
 			'26.30' => [ProtocolInfo::PROTOCOL_1_26_30, '1.26.30'],
 			'26.40' => [ProtocolInfo::PROTOCOL_1_26_40, '1.26.40'],
 			'26.44' => [ProtocolInfo::PROTOCOL_1_26_40, '1.26.44'],
-			'26.45' => [ProtocolInfo::PROTOCOL_1_26_45, '1.26.45']
+			'26.45' => [ProtocolInfo::PROTOCOL_1_26_45, '1.26.45'],
+			'26.50' => [ProtocolInfo::PROTOCOL_1_26_50, '1.26.50'],
+			'26.51' => [ProtocolInfo::PROTOCOL_1_26_51, '1.26.51']
 		];
 	}
 
-	public function testSupportedProtocolsRetainLegacyClientsAndAdvertise2645() : void{
+	public function testSupportedProtocolsRetainLegacyClientsAndAdvertise2651() : void{
 		self::assertContains(ProtocolInfo::PROTOCOL_1_20_0, ProtocolInfo::ACCEPTED_PROTOCOL);
 		self::assertContains(ProtocolInfo::PROTOCOL_1_26_30, ProtocolInfo::ACCEPTED_PROTOCOL);
 		self::assertContains(ProtocolInfo::PROTOCOL_1_26_40, ProtocolInfo::ACCEPTED_PROTOCOL);
 		self::assertContains(ProtocolInfo::PROTOCOL_1_26_45, ProtocolInfo::ACCEPTED_PROTOCOL);
+		self::assertContains(ProtocolInfo::PROTOCOL_1_26_51, ProtocolInfo::ACCEPTED_PROTOCOL);
 	}
 
 	public function testDoubleOptionalWireFormat() : void{

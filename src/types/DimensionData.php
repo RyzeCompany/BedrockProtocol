@@ -30,6 +30,7 @@ final class DimensionData{
 		private int $generator,
 		private int $dimensionType,
 		private ?UuidInterface $packId = null,
+		private string $defaultBiome = "minecraft:plains",
 	){}
 
 	public function getMaxHeight() : int{ return $this->maxHeight; }
@@ -41,6 +42,7 @@ final class DimensionData{
 	public function getDimensionType() : int{ return $this->dimensionType; }
 
 	public function getPackId() : ?UuidInterface{ return $this->packId; }
+	public function getDefaultBiome() : string{ return $this->defaultBiome; }
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$maxHeight = VarInt::readSignedInt($in);
@@ -50,8 +52,9 @@ final class DimensionData{
 			$dimensionType = VarInt::readSignedInt($in);
 		}
 		$packId = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? CommonTypes::getUUID($in) : null;
+		$defaultBiome = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50 ? CommonTypes::getString($in) : "minecraft:plains";
 
-		return new self($maxHeight, $minHeight, $generator, $dimensionType ?? DimensionIds::OVERWORLD, $packId);
+		return new self($maxHeight, $minHeight, $generator, $dimensionType ?? DimensionIds::OVERWORLD, $packId, $defaultBiome);
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
@@ -63,6 +66,9 @@ final class DimensionData{
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			CommonTypes::putUUID($out, $this->packId ?? Uuid::fromString(Uuid::NIL));
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			CommonTypes::putString($out, $this->defaultBiome);
 		}
 	}
 }

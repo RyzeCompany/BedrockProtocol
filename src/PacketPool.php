@@ -230,6 +230,7 @@ class PacketPool{
 		$this->registerPacket(new RefreshEntitlementsPacket());
 		$this->registerPacket(new PlayerToggleCrafterSlotRequestPacket());
 		$this->registerPacket(new SetPlayerInventoryOptionsPacket());
+		$this->registerPacket(new SetPlayerFurnaceOptionsPacket());
 		$this->registerPacket(new SetHudPacket());
 		$this->registerPacket(new AwardAchievementPacket());
 		$this->registerPacket(new ClientboundCloseFormPacket());
@@ -267,6 +268,7 @@ class PacketPool{
 		$this->registerPacket(new ServerboundDataDrivenScreenClosedPacket());
 		$this->registerPacket(new SyncWorldClocksPacket());
 		$this->registerPacket(new ClientboundAttributeLayerSyncPacket());
+		$this->registerPacket(new RecordStartedPacket());
 		$this->registerPacket(new ServerStoreInfoPacket());
 		$this->registerPacket(new ServerPresenceInfoPacket());
 		$this->registerPacket(new ClientboundUpdateSoundDataPacket());

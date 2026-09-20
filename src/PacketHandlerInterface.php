@@ -408,6 +408,8 @@ interface PacketHandlerInterface{
 
 	public function handleSetPlayerInventoryOptions(SetPlayerInventoryOptionsPacket $packet) : bool;
 
+	public function handleSetPlayerFurnaceOptions(SetPlayerFurnaceOptionsPacket $packet) : bool;
+
 	public function handleSetHud(SetHudPacket $packet) : bool;
 
 	public function handleAwardAchievement(AwardAchievementPacket $packet) : bool;
@@ -481,6 +483,8 @@ interface PacketHandlerInterface{
 	public function handleSyncWorldClocks(SyncWorldClocksPacket $packet) : bool;
 
 	public function handleClientboundAttributeLayerSync(ClientboundAttributeLayerSyncPacket $packet) : bool;
+
+	public function handleRecordStarted(RecordStartedPacket $packet) : bool;
 
 	public function handleServerStoreInfo(ServerStoreInfoPacket $packet) : bool;
 

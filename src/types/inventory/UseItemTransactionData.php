@@ -40,6 +40,7 @@ class UseItemTransactionData extends TransactionData{
 	private BlockPosition $blockPosition;
 	private int $face;
 	private int $hotbarSlot;
+	private int $hand = 0;
 	private ItemStackWrapper $itemInHand;
 	private Vector3 $playerPosition;
 	private Vector3 $clickPosition;
@@ -64,6 +65,8 @@ class UseItemTransactionData extends TransactionData{
 	public function getHotbarSlot() : int{
 		return $this->hotbarSlot;
 	}
+
+	public function getHand() : int{ return $this->hand; }
 
 	public function getItemInHand() : ItemStackWrapper{
 		return $this->itemInHand;
@@ -101,6 +104,9 @@ class UseItemTransactionData extends TransactionData{
 			$this->face = VarInt::readSignedInt($in);
 		}
 		$this->hotbarSlot = VarInt::readSignedInt($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			$this->hand = Byte::readUnsigned($in);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$this->itemInHand = CommonTypes::getItemStackWrapper($in, $protocolId);
 		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
@@ -139,6 +145,9 @@ class UseItemTransactionData extends TransactionData{
 			VarInt::writeSignedInt($out, $this->face);
 		}
 		VarInt::writeSignedInt($out, $this->hotbarSlot);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			Byte::writeUnsigned($out, $this->hand);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			CommonTypes::putItemStackWrapper($out, $this->itemInHand, $protocolId);
 		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){

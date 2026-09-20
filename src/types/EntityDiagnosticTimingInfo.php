@@ -18,6 +18,8 @@ use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
+use pocketmine\math\Vector3;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 final class EntityDiagnosticTimingInfo{
@@ -27,6 +29,8 @@ final class EntityDiagnosticTimingInfo{
 		private string $entity,
 		private int $timeInNS,
 		private int $percentOfTotal,
+		private ?Vector3 $position = null,
+		private ?string $dimension = null,
 	){}
 
 	public function getDisplayName() : string{ return $this->displayName; }
@@ -36,25 +40,35 @@ final class EntityDiagnosticTimingInfo{
 	public function getTimeInNS() : int{ return $this->timeInNS; }
 
 	public function getPercentOfTotal() : int{ return $this->percentOfTotal; }
+	public function getPosition() : ?Vector3{ return $this->position; }
+	public function getDimension() : ?string{ return $this->dimension; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId = ProtocolInfo::PROTOCOL_1_26_45) : self{
 		$displayName = CommonTypes::getString($in);
 		$entity = CommonTypes::getString($in);
 		$timeInNS = LE::readUnsignedLong($in);
 		$percentOfTotal = Byte::readUnsigned($in);
+		$position = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50 ? CommonTypes::getVector3($in) : null;
+		$dimension = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50 ? CommonTypes::getString($in) : null;
 
 		return new self(
 			$displayName,
 			$entity,
 			$timeInNS,
-			$percentOfTotal
+			$percentOfTotal,
+			$position,
+			$dimension
 		);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId = ProtocolInfo::PROTOCOL_1_26_45) : void{
 		CommonTypes::putString($out, $this->displayName);
 		CommonTypes::putString($out, $this->entity);
 		LE::writeUnsignedLong($out, $this->timeInNS);
 		Byte::writeUnsigned($out, $this->percentOfTotal);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			CommonTypes::putVector3($out, $this->position ?? new Vector3(0, 0, 0));
+			CommonTypes::putString($out, $this->dimension ?? "minecraft:overworld");
+		}
 	}
 }

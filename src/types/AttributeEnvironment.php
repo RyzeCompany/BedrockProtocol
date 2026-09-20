@@ -34,7 +34,8 @@ final class AttributeEnvironment{
 		private int $totalTransitionTicks,
 		private string $easeType,
 		private int $localTransitionTicks,
-		private bool $noiseTransition
+		private bool $noiseTransition,
+		private ?NoiseAlignment $noiseAlignment = null
 	){}
 
 	public function getName() : string{ return $this->name; }
@@ -57,6 +58,7 @@ final class AttributeEnvironment{
 	public function getLocalTransitionTicks() : int{ return $this->localTransitionTicks; }
 
 	public function isNoiseTransition() : bool{ return $this->noiseTransition; }
+	public function getNoiseAlignment() : ?NoiseAlignment{ return $this->noiseAlignment; }
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$name = CommonTypes::getString($in);
@@ -69,6 +71,7 @@ final class AttributeEnvironment{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$localTransitionTicks = LE::readUnsignedInt($in);
 			$noiseTransition = CommonTypes::getBool($in);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){ $noiseAlignment = NoiseAlignment::read($in); }
 		}
 
 		return new self(
@@ -80,7 +83,8 @@ final class AttributeEnvironment{
 			$totalTransitionTicks,
 			$easeType,
 			$localTransitionTicks ?? 0,
-			$noiseTransition ?? false
+			$noiseTransition ?? false,
+			$noiseAlignment ?? null
 		);
 	}
 
@@ -95,6 +99,7 @@ final class AttributeEnvironment{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			LE::writeUnsignedInt($out, $this->localTransitionTicks);
 			CommonTypes::putBool($out, $this->noiseTransition);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){ ($this->noiseAlignment ?? new NoiseAlignment())->write($out); }
 		}
 	}
 }
