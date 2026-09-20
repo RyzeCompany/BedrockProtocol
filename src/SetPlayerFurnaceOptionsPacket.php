@@ -46,7 +46,7 @@ class SetPlayerFurnaceOptionsPacket extends DataPacket implements ClientboundPac
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->furnaceType = Byte::readUnsigned($in);
 		$this->leftFurnaceTab = VarInt::readSignedInt($in);
-		$this->filtering = $this->readBool($in);
+		$this->filtering = CommonTypes::getBool($in);
 		$this->layout = VarInt::readSignedInt($in);
 	}
 
@@ -57,9 +57,6 @@ class SetPlayerFurnaceOptionsPacket extends DataPacket implements ClientboundPac
 		VarInt::writeSignedInt($out, $this->layout);
 	}
 
-	private function readBool(ByteBufferReader $in) : bool{
-		return CommonTypes::getBool($in);
-	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{
 		return $handler->handleSetPlayerFurnaceOptions($this);
