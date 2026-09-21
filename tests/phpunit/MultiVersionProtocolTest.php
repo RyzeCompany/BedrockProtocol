@@ -598,7 +598,9 @@ final class MultiVersionProtocolTest extends TestCase{
 		$packet->xPos = 1.5;
 		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50
 			? '6f07010000c03f00000000000100000000'
-			: '6f0741000000c03f';
+			: ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+				? '6f07010000c03f000000000001000000'
+				: '6f0741000000c03f');
 		$encoded = self::encodePacket($packet, $protocolId, $gameVersion);
 		self::assertSame($expected, bin2hex($encoded));
 		$decoded = new MoveActorDeltaPacket();
