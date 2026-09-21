@@ -596,7 +596,7 @@ final class MultiVersionProtocolTest extends TestCase{
 		$packet->actorRuntimeId = 7;
 		$packet->flags = MoveActorDeltaPacket::FLAG_HAS_X | MoveActorDeltaPacket::FLAG_GROUND;
 		$packet->xPos = 1.5;
-		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50
 			? '6f07010000c03f00000000000100000000'
 			: '6f0741000000c03f';
 		$encoded = self::encodePacket($packet, $protocolId, $gameVersion);
@@ -700,7 +700,10 @@ final class MultiVersionProtocolTest extends TestCase{
 	#[DataProvider('protocolVersions')]
 	public function testPlaySoundLoopCountExactWireFormat(int $protocolId) : void{
 		$packet = PlaySoundPacket::create('test', 0, 0, 0, 1, 1, null, 2);
-		$expected = '5604746573740000000000803f0000803f' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '04000000' : '00');
+		$expected = '5604746573740000000000803f0000803f' .
+			($protocolId >= ProtocolInfo::PROTOCOL_1_26_50
+				? '04000000'
+				: ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '0400' : '00'));
 		$encoded = self::encodePacket($packet, $protocolId);
 		self::assertSame($expected, bin2hex($encoded));
 		$decoded = new PlaySoundPacket();
