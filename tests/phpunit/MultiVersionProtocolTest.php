@@ -92,6 +92,14 @@ final class MultiVersionProtocolTest extends TestCase{
 		];
 	}
 
+	public function testMemoryCategoryValuesMatch2193() : void{
+		self::assertSame(5, \pocketmine\network\mcpe\protocol\types\MemoryCategory::BLOCK_TICKING_QUEUES);
+		self::assertSame(7, \pocketmine\network\mcpe\protocol\types\MemoryCategory::BLOBS);
+		self::assertSame(58, \pocketmine\network\mcpe\protocol\types\MemoryCategory::PERSONA_CHARACTERS);
+		self::assertSame(61, \pocketmine\network\mcpe\protocol\types\MemoryCategory::PLAYER);
+		self::assertSame(109, \pocketmine\network\mcpe\protocol\types\MemoryCategory::GAMEFACE_LAYOUT);
+	}
+
 	public function testSupportedProtocolsRetainLegacyClientsAndAdvertise2651() : void{
 		self::assertContains(ProtocolInfo::PROTOCOL_1_20_0, ProtocolInfo::ACCEPTED_PROTOCOL);
 		self::assertContains(ProtocolInfo::PROTOCOL_1_26_30, ProtocolInfo::ACCEPTED_PROTOCOL);
