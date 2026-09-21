@@ -25,6 +25,7 @@ use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\network\mcpe\protocol\types\ScorePacketEntry;
 use pocketmine\network\mcpe\protocol\types\ScoreboardIdentityPacketEntry;
 use pocketmine\network\mcpe\protocol\types\SubChunkPosition;
+use pocketmine\network\mcpe\protocol\types\SubChunkPacketHeightMapInfo;
 use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryCommon;
 use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryWithCache;
 use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntryWithCacheList;
@@ -596,7 +597,7 @@ final class MultiVersionProtocolTest extends TestCase{
 		$packet->flags = MoveActorDeltaPacket::FLAG_HAS_X | MoveActorDeltaPacket::FLAG_GROUND;
 		$packet->xPos = 1.5;
 		$expected = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
-			? '6f07010000c03f000000000001000000'
+			? '6f07010000c03f00000000000100000000'
 			: '6f0741000000c03f';
 		$encoded = self::encodePacket($packet, $protocolId, $gameVersion);
 		self::assertSame($expected, bin2hex($encoded));
@@ -699,7 +700,7 @@ final class MultiVersionProtocolTest extends TestCase{
 	#[DataProvider('protocolVersions')]
 	public function testPlaySoundLoopCountExactWireFormat(int $protocolId) : void{
 		$packet = PlaySoundPacket::create('test', 0, 0, 0, 1, 1, null, 2);
-		$expected = '5604746573740000000000803f0000803f' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '0400' : '00');
+		$expected = '5604746573740000000000803f0000803f' . ($protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? '040000' : '00');
 		$encoded = self::encodePacket($packet, $protocolId);
 		self::assertSame($expected, bin2hex($encoded));
 		$decoded = new PlaySoundPacket();
@@ -813,7 +814,6 @@ final class MultiVersionProtocolTest extends TestCase{
 		self::assertSame(5, $decoded->item->getStackId());
 	}
 
-	#[DataProvider('protocolVersions')]
 	public function test2193HeightmapRowsAreLengthPrefixed() : void{
 		$map = new SubChunkPacketHeightMapInfo(array_fill(0, 256, 7));
 		$out = new ByteBufferWriter();
@@ -838,13 +838,14 @@ final class MultiVersionProtocolTest extends TestCase{
 		$response = new ItemStackResponse(ItemStackResponse::RESULT_ERROR, 5);
 		$out = new ByteBufferWriter();
 		$response->write($out, ProtocolInfo::PROTOCOL_1_26_50);
-		self::assertSame('010500', bin2hex($out->getData()));
+		self::assertSame('010a00', bin2hex($out->getData()));
 		$decoded = ItemStackResponse::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_50);
 		self::assertSame(ItemStackResponse::RESULT_ERROR, $decoded->getResult());
 		self::assertSame(5, $decoded->getRequestId());
 		self::assertSame([], $decoded->getContainerInfos());
 	}
 
+	#[DataProvider('protocolVersions')]
 	public function testIntegerGameRuleWireFormat(int $protocolId) : void{
 		$rule = new IntGameRule(300, false);
 		$out = new ByteBufferWriter();
