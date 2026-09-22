@@ -41,6 +41,7 @@ use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\ItemStackRequest;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeAutoStackRequestAction;
+use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\DeprecatedCraftingResultsStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\MineBlockStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackresponse\ItemStackResponse;
 use pocketmine\network\mcpe\protocol\types\inventory\stackresponse\ItemStackResponseSlotInfo;
@@ -455,6 +456,13 @@ final class MultiVersionProtocolTest extends TestCase{
 		self::assertCount(1, $decoded->getActions());
 		self::assertInstanceOf(MineBlockStackRequestAction::class, $decoded->getActions()[0]);
 		self::assertSame(-123, $decoded->getActions()[0]->getStackId());
+	}
+
+	public function testCraftingResults2193DescriptorRoundTripFromClientWire() : void{
+		$payload = hex2bin("0101011b6d696e6563726166743a707269736d6172696e655f737461697273000100df8fd6ea020a0000000000000000000001");
+		self::assertNotFalse($payload);
+		$decoded = DeprecatedCraftingResultsStackRequestAction::read(new ByteBufferReader($payload), ProtocolInfo::PROTOCOL_1_26_50);
+		self::assertSame(1, $decoded->getIterations());
 	}
 
 	#[DataProvider('protocolVersions')]
