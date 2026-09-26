@@ -314,34 +314,17 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		$this->tick = VarInt::readUnsignedLong($in);
 		$this->delta = CommonTypes::getVector3($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			$readOptional = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50;
-			$this->itemInteractionData = $readOptional
-				? CommonTypes::readOptional($in, static fn(ByteBufferReader $in) => ItemInteractionData::read($in, $protocolId))
-				: CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemInteractionData::read($in, $protocolId));
-			$this->itemStackRequest = $readOptional
-				? CommonTypes::readOptional($in, static fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId))
-				: CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId));
-			$this->blockActions = $readOptional
-				? CommonTypes::readOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
-					$actionType = VarInt::readSignedInt($in);
-					if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
-						throw new PacketDecodeException("Unexpected block action type $actionType");
-					}
-					return PlayerBlockActionWithBlockInfo::read($in, $actionType);
-				}))
-				: CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
-					$actionType = VarInt::readSignedInt($in);
-					if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
-						throw new PacketDecodeException("Unexpected block action type $actionType");
-					}
-					return PlayerBlockActionWithBlockInfo::read($in, $actionType);
-				}));
-			$vehicleRotation = $readOptional
-				? CommonTypes::readOptional($in, CommonTypes::getVector2(...))
-				: CommonTypes::readDoubleOptional($in, CommonTypes::getVector2(...));
-			$vehicleActorUniqueId = $readOptional
-				? CommonTypes::readOptional($in, CommonTypes::getActorUniqueId(...))
-				: CommonTypes::readDoubleOptional($in, CommonTypes::getActorUniqueId(...));
+			$this->itemInteractionData = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemInteractionData::read($in, $protocolId), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+			$this->itemStackRequest = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+			$this->blockActions = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
+				$actionType = VarInt::readSignedInt($in);
+				if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
+					throw new PacketDecodeException("Unexpected block action type $actionType");
+				}
+				return PlayerBlockActionWithBlockInfo::read($in, $actionType);
+			}), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+			$vehicleRotation = CommonTypes::readDoubleOptional($in, CommonTypes::getVector2(...), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+			$vehicleActorUniqueId = CommonTypes::readDoubleOptional($in, CommonTypes::getActorUniqueId(...), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
 			if($vehicleRotation !== null && $vehicleActorUniqueId !== null){
 				$this->vehicleInfo = new PlayerAuthInputVehicleInfo($vehicleRotation->x, $vehicleRotation->y, $vehicleActorUniqueId);
 			}elseif($vehicleRotation !== null || $vehicleActorUniqueId !== null){
@@ -423,39 +406,21 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		VarInt::writeUnsignedLong($out, $this->tick);
 		CommonTypes::putVector3($out, $this->delta);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			$writeOptional = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50;
-			if($writeOptional){
-				CommonTypes::writeOptional($out, $this->itemInteractionData, static fn(ByteBufferWriter $out, ItemInteractionData $data) => $data->write($out, $protocolId));
-				CommonTypes::writeOptional($out, $this->itemStackRequest, static fn(ByteBufferWriter $out, ItemStackRequest $request) => $request->write($out, $protocolId));
-				CommonTypes::writeOptional($out, $this->blockActions, static fn(ByteBufferWriter $out, array $actions) => CommonTypes::writeList($out, $actions, static function(ByteBufferWriter $out, PlayerBlockAction $action) : void{
-					if(!$action instanceof PlayerBlockActionWithBlockInfo){
-						throw new \InvalidArgumentException("Protocol 26.40+ block actions require block position and face");
-					}
-					VarInt::writeSignedInt($out, $action->getActionType());
-					$action->write($out);
-				}));
-			}else{
-				CommonTypes::writeDoubleOptional($out, $this->itemInteractionData, static fn(ByteBufferWriter $out, ItemInteractionData $data) => $data->write($out, $protocolId));
-				CommonTypes::writeDoubleOptional($out, $this->itemStackRequest, static fn(ByteBufferWriter $out, ItemStackRequest $request) => $request->write($out, $protocolId));
-				CommonTypes::writeDoubleOptional($out, $this->blockActions, static fn(ByteBufferWriter $out, array $actions) => CommonTypes::writeList($out, $actions, static function(ByteBufferWriter $out, PlayerBlockAction $action) : void{
-					if(!$action instanceof PlayerBlockActionWithBlockInfo){
-						throw new \InvalidArgumentException("Protocol 26.40+ block actions require block position and face");
-					}
-					VarInt::writeSignedInt($out, $action->getActionType());
-					$action->write($out);
-				}));
-			}
+			CommonTypes::writeDoubleOptional($out, $this->itemInteractionData, static fn(ByteBufferWriter $out, ItemInteractionData $data) => $data->write($out, $protocolId), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+			CommonTypes::writeDoubleOptional($out, $this->itemStackRequest, static fn(ByteBufferWriter $out, ItemStackRequest $request) => $request->write($out, $protocolId), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+			CommonTypes::writeDoubleOptional($out, $this->blockActions, static fn(ByteBufferWriter $out, array $actions) => CommonTypes::writeList($out, $actions, static function(ByteBufferWriter $out, PlayerBlockAction $action) : void{
+				if(!$action instanceof PlayerBlockActionWithBlockInfo){
+					throw new \InvalidArgumentException("Protocol 26.40+ block actions require block position and face");
+				}
+				VarInt::writeSignedInt($out, $action->getActionType());
+				$action->write($out);
+			}), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
 			$vehicleRotation = $this->vehicleInfo === null ? null : new Vector2(
 				$this->vehicleInfo->getVehicleRotationX() ?? throw new \InvalidArgumentException("Vehicle rotation X is missing"),
 				$this->vehicleInfo->getVehicleRotationZ() ?? throw new \InvalidArgumentException("Vehicle rotation Z is missing")
 			);
-			if($writeOptional){
-				CommonTypes::writeOptional($out, $vehicleRotation, CommonTypes::putVector2(...));
-				CommonTypes::writeOptional($out, $this->vehicleInfo?->getPredictedVehicleActorUniqueId(), CommonTypes::putActorUniqueId(...));
-			}else{
-				CommonTypes::writeDoubleOptional($out, $vehicleRotation, CommonTypes::putVector2(...));
-				CommonTypes::writeDoubleOptional($out, $this->vehicleInfo?->getPredictedVehicleActorUniqueId(), CommonTypes::putActorUniqueId(...));
-			}
+			CommonTypes::writeDoubleOptional($out, $vehicleRotation, CommonTypes::putVector2(...), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+			CommonTypes::writeDoubleOptional($out, $this->vehicleInfo?->getPredictedVehicleActorUniqueId(), CommonTypes::putActorUniqueId(...), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
 		}elseif($this->itemInteractionData !== null){
 			$this->itemInteractionData->write($out, $protocolId);
 		}
