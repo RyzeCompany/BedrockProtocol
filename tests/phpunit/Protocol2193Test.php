@@ -12,6 +12,33 @@ final class Protocol2193Test extends TestCase{
 		self::assertSame(2169, ProtocolInfo::PROTOCOL_1_26_45);
 		self::assertContains(ProtocolInfo::PROTOCOL_1_26_51, ProtocolInfo::ACCEPTED_PROTOCOL);
 	}
+	public function testPlayerAuthInput2193DoesNotWriteObsoletePresenceMarkers() : void{
+		$flags = new BitSet(PlayerAuthInputFlags::NUMBER_OF_FLAGS);
+		$packet = PlayerAuthInputPacket::create(
+			new Vector3(1, 64, 2),
+			1, 2, 3,
+			0.25, 0.5,
+			$flags,
+			1, 0, 1,
+			null,
+			new Vector2(0, 0),
+			10,
+			new Vector3(0, 0, 0),
+			null, null, null, null,
+			0, 0,
+			new Vector3(0, 0, 0),
+			new Vector2(0, 0)
+		);
+
+		$out = new ByteBufferWriter();
+		$packet->encode($out, ProtocolInfo::PROTOCOL_1_26_51);
+
+		// Protocol 2193 removed the obsolete Cereal presence markers from
+		// PlayerAuthInputPacket optional fields. With all optional payloads
+		// absent, no bytes are emitted between Pos Delta and Analog Move Vector.
+		self::assertSame(88, strlen($out->getData()));
+	}
+
 	public function testNewPacketIds() : void{
 		self::assertSame(351, SetPlayerFurnaceOptionsPacket::NETWORK_ID);
 		self::assertSame(352, RecordStartedPacket::NETWORK_ID);
