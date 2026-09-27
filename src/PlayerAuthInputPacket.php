@@ -314,23 +314,49 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		$this->tick = VarInt::readUnsignedLong($in);
 		$this->delta = CommonTypes::getVector3($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			$this->itemInteractionData = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemInteractionData::read($in, $protocolId), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
-			$this->itemStackRequest = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
-			$this->blockActions = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
-				$actionType = VarInt::readSignedInt($in);
-				if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
-					throw new PacketDecodeException("Unexpected block action type $actionType");
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+				// Protocol 2193 removed the redundant Cereal presence markers from
+				// PlayerAuthInputPacket. The Input Data flags are the wire-level
+				// presence indicators for these fields.
+				if($this->inputFlags->get(33)){
+					$this->itemInteractionData = ItemInteractionData::read($in, $protocolId);
 				}
-				return PlayerBlockActionWithBlockInfo::read($in, $actionType);
-			}), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
-			$vehicleRotation = CommonTypes::readDoubleOptional($in, CommonTypes::getVector2(...), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
-			$vehicleActorUniqueId = CommonTypes::readDoubleOptional($in, CommonTypes::getActorUniqueId(...), $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
-			if($vehicleRotation !== null && $vehicleActorUniqueId !== null){
-				$this->vehicleInfo = new PlayerAuthInputVehicleInfo($vehicleRotation->x, $vehicleRotation->y, $vehicleActorUniqueId);
-			}elseif($vehicleRotation !== null || $vehicleActorUniqueId !== null){
-				throw new PacketDecodeException("Vehicle rotation and actor unique ID must both be present or absent");
+				if($this->inputFlags->get(35)){
+					$this->itemStackRequest = ItemStackRequest::read($in, $protocolId);
+				}
+				if($this->inputFlags->get(34)){
+					$this->blockActions = CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
+						$actionType = VarInt::readSignedInt($in);
+						if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
+							throw new PacketDecodeException("Unexpected block action type $actionType");
+						}
+						return PlayerBlockActionWithBlockInfo::read($in, $actionType);
+					});
+				}
+				if($this->inputFlags->get(44)){
+					$vehicleRotation = CommonTypes::getVector2($in);
+					$vehicleActorUniqueId = CommonTypes::getActorUniqueId($in);
+					$this->vehicleInfo = new PlayerAuthInputVehicleInfo($vehicleRotation->x, $vehicleRotation->y, $vehicleActorUniqueId);
+				}
 			}else{
-				$this->vehicleInfo = null;
+				$this->itemInteractionData = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemInteractionData::read($in, $protocolId), false);
+				$this->itemStackRequest = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId), false);
+				$this->blockActions = CommonTypes::readDoubleOptional($in, static fn(ByteBufferReader $in) : array => CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
+					$actionType = VarInt::readSignedInt($in);
+					if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
+						throw new PacketDecodeException("Unexpected block action type $actionType");
+					}
+					return PlayerBlockActionWithBlockInfo::read($in, $actionType);
+				}), false);
+				$vehicleRotation = CommonTypes::readDoubleOptional($in, CommonTypes::getVector2(...), false);
+				$vehicleActorUniqueId = CommonTypes::readDoubleOptional($in, CommonTypes::getActorUniqueId(...), false);
+				if($vehicleRotation !== null && $vehicleActorUniqueId !== null){
+					$this->vehicleInfo = new PlayerAuthInputVehicleInfo($vehicleRotation->x, $vehicleRotation->y, $vehicleActorUniqueId);
+				}elseif($vehicleRotation !== null || $vehicleActorUniqueId !== null){
+					throw new PacketDecodeException("Vehicle rotation and actor unique ID must both be present or absent");
+				}else{
+					$this->vehicleInfo = null;
+				}
 			}
 		}elseif($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_INTERACTION)){
 			$this->itemInteractionData = ItemInteractionData::read($in, $protocolId);
