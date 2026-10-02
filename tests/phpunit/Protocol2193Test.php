@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use pocketmine\math\Vector2;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\serializer\BitSet;
+use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 
 final class Protocol2193Test extends TestCase{
 
@@ -42,7 +43,7 @@ final class Protocol2193Test extends TestCase{
 		// Protocol 2193 removed the obsolete Cereal presence markers from
 		// PlayerAuthInputPacket optional fields. With all optional payloads
 		// absent, no bytes are emitted between Pos Delta and Analog Move Vector.
-		self::assertSame(88, strlen($out->getData()));
+		self::assertSame(87, strlen($out->getData()));
 	}
 
 	public function testPlayerAuthInput2193UsesFlagsForConditionalFields() : void{

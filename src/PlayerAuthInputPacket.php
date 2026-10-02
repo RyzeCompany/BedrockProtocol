@@ -318,13 +318,13 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 				// Protocol 2193 removed the redundant Cereal presence markers from
 				// PlayerAuthInputPacket. The Input Data flags are the wire-level
 				// presence indicators for these fields.
-				if($this->inputFlags->get(33)){
+				if($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_INTERACTION)){
 					$this->itemInteractionData = ItemInteractionData::read($in, $protocolId);
 				}
-				if($this->inputFlags->get(35)){
+				if($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_STACK_REQUEST)){
 					$this->itemStackRequest = ItemStackRequest::read($in, $protocolId);
 				}
-				if($this->inputFlags->get(34)){
+				if($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_BLOCK_ACTIONS)){
 					$this->blockActions = CommonTypes::readList($in, static function(ByteBufferReader $in) : PlayerBlockAction{
 						$actionType = VarInt::readSignedInt($in);
 						if(!PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true)){
@@ -333,7 +333,7 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 						return PlayerBlockActionWithBlockInfo::read($in, $actionType);
 					});
 				}
-				if($this->inputFlags->get(44)){
+				if($this->inputFlags->get(PlayerAuthInputFlags::IN_CLIENT_PREDICTED_VEHICLE)){
 					$vehicleRotation = CommonTypes::getVector2($in);
 					$vehicleActorUniqueId = CommonTypes::getActorUniqueId($in);
 					$this->vehicleInfo = new PlayerAuthInputVehicleInfo($vehicleRotation->x, $vehicleRotation->y, $vehicleActorUniqueId);
