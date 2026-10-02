@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use pocketmine\math\Vector2;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\serializer\BitSet;
+use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 
 final class Protocol2193Test extends TestCase{
 
@@ -18,7 +19,7 @@ final class Protocol2193Test extends TestCase{
 		self::assertSame(2169, ProtocolInfo::PROTOCOL_1_26_45);
 		self::assertContains(ProtocolInfo::PROTOCOL_1_26_51, ProtocolInfo::ACCEPTED_PROTOCOL);
 	}
-	public function testPlayerAuthInput2193DoesNotWriteObsoletePresenceMarkers() : void{
+	public function testPlayerAuthInput2193RetainsSinglePresenceMarkers() : void{
 		$flags = new BitSet(PlayerAuthInputFlags::NUMBER_OF_FLAGS);
 		$packet = PlayerAuthInputPacket::create(
 			new Vector3(1, 64, 2),
@@ -39,13 +40,11 @@ final class Protocol2193Test extends TestCase{
 		$out = new ByteBufferWriter();
 		$packet->encode($out, ProtocolInfo::PROTOCOL_1_26_51);
 
-		// Protocol 2193 removed the obsolete Cereal presence markers from
-		// PlayerAuthInputPacket optional fields. With all optional payloads
-		// absent, no bytes are emitted between Pos Delta and Analog Move Vector.
-		self::assertSame(88, strlen($out->getData()));
+		// Five optional fields retain one presence byte each; only the outer dummy markers were removed.
+		self::assertSame(92, strlen($out->getData()));
 	}
 
-	public function testPlayerAuthInput2193UsesFlagsForConditionalFields() : void{
+	public function testPlayerAuthInput2193ReadsAbsentOptionalFields() : void{
 		$flags = new BitSet(PlayerAuthInputFlags::NUMBER_OF_FLAGS);
 		$packet = PlayerAuthInputPacket::create(
 			new Vector3(1, 64, 2),
