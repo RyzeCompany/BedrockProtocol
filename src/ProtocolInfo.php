@@ -32,7 +32,7 @@ final class ProtocolInfo{
 	 */
 
 	/** Actual Minecraft: PE protocol version */
-	public const CURRENT_PROTOCOL = self::PROTOCOL_1_26_51;
+	public const CURRENT_PROTOCOL = self::PROTOCOL_1_26_52;
 	public const ACCEPTED_PROTOCOL = [
 		self::PROTOCOL_1_20_0,
 		self::PROTOCOL_1_20_10,
@@ -68,10 +68,11 @@ final class ProtocolInfo{
 	];
 
 	/** Display version shown in the server logs. This should match the version on the game's home screen. */
-	public const MINECRAFT_VERSION = 'v26.51';
+	public const MINECRAFT_VERSION = 'v26.52';
 	/** Version sent on the network for client side compatibility checks. This may differ from the display version. */
-	public const MINECRAFT_VERSION_NETWORK = '1.26.51';
+	public const MINECRAFT_VERSION_NETWORK = '1.26.52';
 
+	public const PROTOCOL_1_26_52 = 2193;
 	public const PROTOCOL_1_26_51 = 2193;
 	public const PROTOCOL_1_26_50 = 2193;
 	public const PROTOCOL_1_26_45 = 2169;
