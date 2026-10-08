@@ -22,6 +22,8 @@ use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 class ChangeDimensionPacket extends DataPacket implements ClientboundPacket{
+	/** Mojang changed this field from a fixed uint32 to an optional uint32 in protocol 2207. */
+	private const OPTIONAL_LOADING_SCREEN_PROTOCOL = 2207;
 	public const NETWORK_ID = ProtocolInfo::CHANGE_DIMENSION_PACKET;
 
 	public int $dimension;
@@ -48,7 +50,9 @@ class ChangeDimensionPacket extends DataPacket implements ClientboundPacket{
 		$this->position = CommonTypes::getVector3($in);
 		$this->respawn = CommonTypes::getBool($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
-			$this->loadingScreenId = CommonTypes::readOptional($in, LE::readUnsignedInt(...));
+			$this->loadingScreenId = $protocolId >= self::OPTIONAL_LOADING_SCREEN_PROTOCOL
+				? CommonTypes::readOptional($in, LE::readUnsignedInt(...))
+				: LE::readUnsignedInt($in);
 		}
 	}
 
@@ -57,7 +61,11 @@ class ChangeDimensionPacket extends DataPacket implements ClientboundPacket{
 		CommonTypes::putVector3($out, $this->position);
 		CommonTypes::putBool($out, $this->respawn);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
-			CommonTypes::writeOptional($out, $this->loadingScreenId, LE::writeUnsignedInt(...));
+			if($protocolId >= self::OPTIONAL_LOADING_SCREEN_PROTOCOL){
+				CommonTypes::writeOptional($out, $this->loadingScreenId, LE::writeUnsignedInt(...));
+			}else{
+				LE::writeUnsignedInt($out, $this->loadingScreenId ?? 0);
+			}
 		}
 	}
 
