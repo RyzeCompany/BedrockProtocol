@@ -44,7 +44,7 @@ final class DimensionLoadingScreenCompatibilityTest extends TestCase{
 		$packet = ServerboundLoadingScreenPacket::create($type, 123456);
 		$out = new ByteBufferWriter();
 		$packet->encode($out, ProtocolInfo::PROTOCOL_1_26_52);
-		self::assertSame(chr($onWire) . pack('V', 123456), substr($out->getData(), -5));
+		self::assertSame(chr($onWire * 2) . pack('V', 123456), substr($out->getData(), -5));
 		$decoded = new ServerboundLoadingScreenPacket();
 		$decoded->decode(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_52);
 		self::assertSame($type, $decoded->getLoadingScreenType());
@@ -55,7 +55,7 @@ final class DimensionLoadingScreenCompatibilityTest extends TestCase{
 		$packet = ServerboundLoadingScreenPacket::create(LoadingScreenType::STOP_LOADING_SCREEN, 123456);
 		$out = new ByteBufferWriter();
 		$packet->encode($out, 2207);
-		self::assertSame("\x02\x01" . pack('V', 123456), substr($out->getData(), -6));
+		self::assertSame("\x04\x01" . pack('V', 123456), substr($out->getData(), -6));
 		$decoded = new ServerboundLoadingScreenPacket();
 		$decoded->decode(new ByteBufferReader($out->getData()), 2207);
 		self::assertSame(LoadingScreenType::STOP_LOADING_SCREEN, $decoded->getLoadingScreenType());
