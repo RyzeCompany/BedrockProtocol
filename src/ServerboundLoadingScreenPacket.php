@@ -22,6 +22,8 @@ use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\hud\LoadingScreenType;
 
 class ServerboundLoadingScreenPacket extends DataPacket implements ServerboundPacket{
+	/** Protocol 2207 changed both the packet type values and the loading screen ID encoding. */
+	private const OPTIONAL_LOADING_SCREEN_PROTOCOL = 2207;
 	public const NETWORK_ID = ProtocolInfo::SERVERBOUND_LOADING_SCREEN_PACKET;
 
 	private LoadingScreenType $loadingScreenType;
@@ -42,13 +44,35 @@ class ServerboundLoadingScreenPacket extends DataPacket implements ServerboundPa
 	public function getLoadingScreenId() : ?int{ return $this->loadingScreenId; }
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$this->loadingScreenType = LoadingScreenType::fromPacket(VarInt::readSignedInt($in));
-		$this->loadingScreenId = CommonTypes::readOptional($in, LE::readUnsignedInt(...));
+		$type = VarInt::readSignedInt($in);
+		if($protocolId >= self::OPTIONAL_LOADING_SCREEN_PROTOCOL){
+			$this->loadingScreenType = LoadingScreenType::fromPacket($type);
+			$this->loadingScreenId = CommonTypes::readOptional($in, LE::readUnsignedInt(...));
+		}else{
+			// Before 2207, 0=start and 1=stop (in newer protocols these are 1 and 2).
+			$this->loadingScreenType = match($type){
+				0 => LoadingScreenType::START_LOADING_SCREEN,
+				1 => LoadingScreenType::STOP_LOADING_SCREEN,
+				default => LoadingScreenType::UNKNOWN
+			};
+			$id = LE::readUnsignedInt($in);
+			$this->loadingScreenId = $id === 0 ? null : $id;
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		VarInt::writeSignedInt($out, $this->loadingScreenType->value);
-		CommonTypes::writeOptional($out, $this->loadingScreenId, LE::writeUnsignedInt(...));
+		if($protocolId >= self::OPTIONAL_LOADING_SCREEN_PROTOCOL){
+			VarInt::writeSignedInt($out, $this->loadingScreenType->value);
+			CommonTypes::writeOptional($out, $this->loadingScreenId, LE::writeUnsignedInt(...));
+		}else{
+			$type = match($this->loadingScreenType){
+				LoadingScreenType::START_LOADING_SCREEN => 0,
+				LoadingScreenType::STOP_LOADING_SCREEN => 1,
+				default => -1
+			};
+			VarInt::writeSignedInt($out, $type);
+			LE::writeUnsignedInt($out, $this->loadingScreenId ?? 0);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{
