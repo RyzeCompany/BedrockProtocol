@@ -20,7 +20,7 @@ use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\PlayerAction;
-use pocketmine\network\mcpe\protocol\types\PlayerAction;
+
 
 class PlayerActionPacket extends DataPacket implements ClientboundPacket, ServerboundPacket{
 	/**
