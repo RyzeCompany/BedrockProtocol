@@ -46,3 +46,10 @@ If you want to improve BedrockProtocol, please open issues with suggestions, or 
 
 This repository is maintained by [RyzeMCBE](https://github.com/RyzeMCBE) as a dependency of [RyzeMP](https://github.com/RyzeMCBE/RyzeMP).
 The original upstream contributors, source licenses, and compatibility-oriented PHP namespaces remain acknowledged and unchanged.
+# Preparación de Minecraft Bedrock 1.16.100
+
+La constante `PROTOCOL_1_16_100` y `ProtocolTransportInfo` describen el transporte
+419; `LegacyLoginPacketDecoder` valida su Login inicial ya descomprimido usando
+los lectores nativos. Esta primera etapa no añade 419 a `ACCEPTED_PROTOCOL`.
+Los paquetes de juego y las pruebas con clientes reales siguen pendientes.
+

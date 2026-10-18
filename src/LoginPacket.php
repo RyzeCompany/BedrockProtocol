@@ -56,6 +56,9 @@ class LoginPacket extends DataPacket implements ServerboundPacket{
 
 		$clientDataJwtLength = LE::readUnsignedInt($connRequestReader);
 		$this->clientDataJwt = $connRequestReader->readByteArray($clientDataJwtLength);
+		if($this->protocol === ProtocolInfo::PROTOCOL_1_16_100 && $connRequestReader->getUnreadLength() !== 0){
+			throw new PacketDecodeException("Trailing bytes in legacy connection request");
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
