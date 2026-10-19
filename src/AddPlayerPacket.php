@@ -30,8 +30,8 @@ use function count;
 
 class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::ADD_PLAYER_PACKET;
-	private ?AdventureSettingsPacket $legacyAbilities = null;
-	private ?int $legacyActorUniqueId = null;
+	public ?AdventureSettingsPacket $legacyAbilities = null;
+	public ?int $legacyActorUniqueId = null;
 
 	public UuidInterface $uuid;
 	public string $username;
