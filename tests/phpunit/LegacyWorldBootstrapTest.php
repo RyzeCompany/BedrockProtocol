@@ -62,6 +62,8 @@ final class LegacyWorldBootstrapTest extends TestCase{
 		$level->rainLevel = 0.25;
 		$level->lightningLevel = 0.5;
 		$level->commandsEnabled = true;
+		$level->xboxLiveBroadcastMode = 3;
+		$level->platformBroadcastMode = 3;
 		$level->gameRules = self::rules();
 		$level->experiments = self::experiments();
 		$level->hasBonusChestEnabled = true;
