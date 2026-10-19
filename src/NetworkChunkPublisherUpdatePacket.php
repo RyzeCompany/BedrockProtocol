@@ -48,6 +48,10 @@ class NetworkChunkPublisherUpdatePacket extends DataPacket implements Clientboun
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->blockPosition = CommonTypes::getBlockPosition($in);
 		$this->radius = VarInt::readUnsignedInt($in);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->savedChunks = [];
+			return;
+		}
 
 		$count = LE::readUnsignedInt($in);
 		if($count > self::MAX_SAVED_CHUNKS){
@@ -61,6 +65,9 @@ class NetworkChunkPublisherUpdatePacket extends DataPacket implements Clientboun
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putBlockPosition($out, $this->blockPosition);
 		VarInt::writeUnsignedInt($out, $this->radius);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
+		}
 
 		LE::writeUnsignedInt($out, count($this->savedChunks));
 		foreach($this->savedChunks as $chunk){

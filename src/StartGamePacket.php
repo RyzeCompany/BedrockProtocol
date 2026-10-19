@@ -30,6 +30,7 @@ use pocketmine\network\mcpe\protocol\types\PlayerMovementSettings;
 use pocketmine\network\mcpe\protocol\types\ServerJoinInformation;
 use pocketmine\network\mcpe\protocol\types\ServerTelemetryData;
 use Ramsey\Uuid\UuidInterface;
+use Ramsey\Uuid\Uuid;
 use function count;
 
 class StartGamePacket extends DataPacket implements ClientboundPacket{
@@ -160,6 +161,9 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->serverTelemetryData = new ServerTelemetryData("", "", "", "");
+		}
 		$this->actorUniqueId = CommonTypes::getActorUniqueId($in);
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
 		$this->playerGamemode = VarInt::readSignedInt($in);
@@ -200,6 +204,19 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 
 		$this->multiplayerCorrelationId = CommonTypes::getString($in);
 		$this->enableNewInventorySystem = CommonTypes::getBool($in);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->serverSoftwareVersion = "";
+			$this->playerActorProperties = new CacheableNbt(new CompoundTag());
+			$this->blockPaletteChecksum = 0;
+			$this->worldTemplateId = Uuid::fromString("00000000-0000-0000-0000-000000000000");
+			$this->enableClientSideChunkGeneration = false;
+			$this->blockNetworkIdsAreHashes = false;
+			$this->enableTickDeathSystems = false;
+			$this->networkPermissions = new NetworkPermissions(false);
+			$this->isLoggingChat = false;
+			$this->serverJoinInformation = null;
+			return;
+		}
 		$this->serverSoftwareVersion = CommonTypes::getString($in);
 		$this->playerActorProperties = new CacheableNbt(CommonTypes::getNbtCompoundRoot($in));
 		$this->blockPaletteChecksum = LE::readUnsignedLong($in);
@@ -257,6 +274,9 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 
 		CommonTypes::putString($out, $this->multiplayerCorrelationId);
 		CommonTypes::putBool($out, $this->enableNewInventorySystem);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
+		}
 		CommonTypes::putString($out, $this->serverSoftwareVersion);
 		$out->writeByteArray($this->playerActorProperties->getEncodedNbt());
 		LE::writeUnsignedLong($out, $this->blockPaletteChecksum);
