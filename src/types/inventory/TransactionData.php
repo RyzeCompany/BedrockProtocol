@@ -39,11 +39,15 @@ abstract class TransactionData{
 	 * @throws DataDecodeException
 	 * @throws PacketDecodeException
 	 */
-	final public function decodeTransaction(ByteBufferReader $in, int $protocolId) : void{
+	final public function decodeTransaction(ByteBufferReader $in, int $protocolId, bool $legacyHasItemStackIds = false) : void{
 		$actionCount = VarInt::readUnsignedInt($in);
 		$this->actions = [];
 		for($i = 0; $i < $actionCount; ++$i){
-			$this->actions[] = (new NetworkInventoryAction())->readTransaction($in, $protocolId);
+			$action = (new NetworkInventoryAction())->readTransaction($in, $protocolId);
+			if($legacyHasItemStackIds && $protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+				$action->newItem = new ItemStackWrapper(VarInt::readSignedInt($in), $action->newItem->getItemStack());
+			}
+			$this->actions[] = $action;
 		}
 		$this->decodeData($in, $protocolId);
 	}
@@ -66,10 +70,13 @@ abstract class TransactionData{
 	 */
 	abstract protected function decodeData(ByteBufferReader $in, int $protocolId) : void;
 
-	final public function encodeTransaction(ByteBufferWriter $out, int $protocolId) : void{
+	final public function encodeTransaction(ByteBufferWriter $out, int $protocolId, bool $legacyHasItemStackIds = false) : void{
 		VarInt::writeUnsignedInt($out, count($this->actions));
 		foreach($this->actions as $action){
 			$action->writeTransaction($out, $protocolId);
+			if($legacyHasItemStackIds && $protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+				VarInt::writeSignedInt($out, $action->newItem->getStackId());
+			}
 		}
 		$this->encodeData($out, $protocolId);
 	}

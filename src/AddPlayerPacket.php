@@ -30,6 +30,8 @@ use function count;
 
 class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::ADD_PLAYER_PACKET;
+	private ?AdventureSettingsPacket $legacyAbilities = null;
+	private ?int $legacyActorUniqueId = null;
 
 	public UuidInterface $uuid;
 	public string $username;
@@ -105,6 +107,9 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->uuid = CommonTypes::getUUID($in);
 		$this->username = CommonTypes::getString($in);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->legacyActorUniqueId = CommonTypes::getActorUniqueId($in);
+		}
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
 		$this->platformChatId = CommonTypes::getString($in);
 		$this->position = CommonTypes::getVector3($in);
@@ -113,12 +118,19 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		$this->yaw = LE::readFloat($in);
 		$this->headYaw = LE::readFloat($in);
 		$this->item = CommonTypes::getItemStackWrapper($in, $protocolId);
-		$this->gameMode = VarInt::readSignedInt($in);
+		$this->gameMode = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? 0 : VarInt::readSignedInt($in);
 		$this->metadata = CommonTypes::getEntityMetadata($in, $protocolId);
-		$this->syncedProperties = PropertySyncData::read($in);
+		$this->syncedProperties = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? new PropertySyncData([], []) : PropertySyncData::read($in);
 
 		$this->abilitiesPacket = new UpdateAbilitiesPacket();
-		$this->abilitiesPacket->decodePayload($in, $protocolId);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+   $legacy = new AdventureSettingsPacket();
+   $legacy->decodePayload($in, $protocolId);
+   $this->legacyAbilities = $legacy;
+   $this->abilitiesPacket = UpdateAbilitiesPacket::create(new \pocketmine\network\mcpe\protocol\types\AbilitiesData($legacy->commandPermission, $legacy->playerPermission, $legacy->entityUniqueId, []));
+  }else{
+   $this->abilitiesPacket->decodePayload($in, $protocolId);
+  }
 
 		$linkCount = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $linkCount; ++$i){
@@ -132,6 +144,9 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putUUID($out, $this->uuid);
 		CommonTypes::putString($out, $this->username);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			CommonTypes::putActorUniqueId($out, $this->legacyActorUniqueId ?? $this->abilitiesPacket->getData()->getTargetActorUniqueId());
+		}
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
 		CommonTypes::putString($out, $this->platformChatId);
 		CommonTypes::putVector3($out, $this->position);
@@ -140,11 +155,19 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		LE::writeFloat($out, $this->yaw);
 		LE::writeFloat($out, $this->headYaw);
 		CommonTypes::putItemStackWrapper($out, $this->item, $protocolId);
-		VarInt::writeSignedInt($out, $this->gameMode);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			VarInt::writeSignedInt($out, $this->gameMode);
+		}
 		CommonTypes::putEntityMetadata($out, $this->metadata, $protocolId);
-		$this->syncedProperties->write($out);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			$this->syncedProperties->write($out);
+		}
 
-		$this->abilitiesPacket->encodePayload($out, $protocolId);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+   ($this->legacyAbilities ?? AdventureSettingsPacket::fromAbilitiesData($this->abilitiesPacket->getData()))->encodePayload($out, $protocolId);
+  }else{
+   $this->abilitiesPacket->encodePayload($out, $protocolId);
+  }
 
 		VarInt::writeUnsignedInt($out, count($this->links));
 		foreach($this->links as $link){

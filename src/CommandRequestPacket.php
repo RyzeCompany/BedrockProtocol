@@ -49,7 +49,7 @@ class CommandRequestPacket extends DataPacket implements ServerboundPacket{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
 			$this->version = CommonTypes::getString($in);
 		}else{
-			$this->oldVersion = VarInt::readSignedInt($in);
+			$this->oldVersion = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? 0 : VarInt::readSignedInt($in);
 		}
 	}
 
@@ -59,7 +59,7 @@ class CommandRequestPacket extends DataPacket implements ServerboundPacket{
 		CommonTypes::putBool($out, $this->isInternal);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
 			CommonTypes::putString($out, $this->version);
-		}else{
+		}elseif($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
 			VarInt::writeSignedInt($out, $this->oldVersion);
 		}
 	}

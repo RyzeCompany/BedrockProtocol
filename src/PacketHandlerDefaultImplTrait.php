@@ -726,6 +726,10 @@ trait PacketHandlerDefaultImplTrait{
 		return false;
 	}
 
+	public function handleAdventureSettings(AdventureSettingsPacket $packet) : bool{
+		return false;
+	}
+
 	public function handleUpdateAdventureSettings(UpdateAdventureSettingsPacket $packet) : bool{
 		return false;
 	}

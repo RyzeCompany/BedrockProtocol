@@ -212,6 +212,7 @@ class PacketPool{
 		$this->registerPacket(new ToastRequestPacket());
 		$this->registerPacket(new UpdateAbilitiesPacket());
 		$this->registerPacket(new UpdateAdventureSettingsPacket());
+		$this->registerPacket(new AdventureSettingsPacket());
 		$this->registerPacket(new DeathInfoPacket());
 		$this->registerPacket(new EditorNetworkPacket());
 		$this->registerPacket(new FeatureRegistryPacket());
