@@ -124,13 +124,13 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 
 		$this->abilitiesPacket = new UpdateAbilitiesPacket();
 		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
-   $legacy = new AdventureSettingsPacket();
-   $legacy->decodePayload($in, $protocolId);
-   $this->legacyAbilities = $legacy;
-   $this->abilitiesPacket = UpdateAbilitiesPacket::create(new \pocketmine\network\mcpe\protocol\types\AbilitiesData($legacy->commandPermission, $legacy->playerPermission, $legacy->entityUniqueId, []));
-  }else{
-   $this->abilitiesPacket->decodePayload($in, $protocolId);
-  }
+			$legacy = new AdventureSettingsPacket();
+			$legacy->decodePayload($in, $protocolId);
+			$this->legacyAbilities = $legacy;
+			$this->abilitiesPacket = UpdateAbilitiesPacket::create(new \pocketmine\network\mcpe\protocol\types\AbilitiesData($legacy->commandPermission, $legacy->playerPermission, $legacy->entityUniqueId, []));
+		}else{
+			$this->abilitiesPacket->decodePayload($in, $protocolId);
+		}
 
 		$linkCount = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $linkCount; ++$i){
@@ -164,10 +164,10 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		}
 
 		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
-   ($this->legacyAbilities ?? AdventureSettingsPacket::fromAbilitiesData($this->abilitiesPacket->getData()))->encodePayload($out, $protocolId);
-  }else{
-   $this->abilitiesPacket->encodePayload($out, $protocolId);
-  }
+			($this->legacyAbilities ?? AdventureSettingsPacket::fromAbilitiesData($this->abilitiesPacket->getData()))->encodePayload($out, $protocolId);
+		}else{
+			$this->abilitiesPacket->encodePayload($out, $protocolId);
+		}
 
 		VarInt::writeUnsignedInt($out, count($this->links));
 		foreach($this->links as $link){

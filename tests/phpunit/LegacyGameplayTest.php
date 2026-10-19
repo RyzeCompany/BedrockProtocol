@@ -50,6 +50,19 @@ final class LegacyGameplayTest extends TestCase{
 		self::assertSame($bytes, $out->getData());
 	}
 
+	public function testHistoricalShieldBlockingTickUsesSignedVarLong() : void{
+		$bytes = hex2bin('c60502000000000e');
+		$in = new ByteBufferReader($bytes);
+		$item = CommonTypes::getItemStackWithoutStackId($in, 419);
+		self::assertSame(355, $item->getId());
+		self::assertSame(0, $in->getUnreadLength());
+		$extra = \pocketmine\network\mcpe\protocol\types\inventory\ItemStackExtraDataShield::read(new ByteBufferReader($item->getRawExtraData()));
+		self::assertSame(7, $extra->getBlockingTick());
+		$out = new ByteBufferWriter();
+		CommonTypes::putItemStackWithoutStackId($out, $item, 419);
+		self::assertSame($bytes, $out->getData());
+	}
+
 	public function testMetadataProjectionUsesHistoricalIdsWithoutMutatingCurrentData() : void{
 		$metadata = [
 			Properties::NAMETAG => new StringMetadataProperty('Tester'),

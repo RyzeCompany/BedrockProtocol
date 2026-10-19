@@ -122,30 +122,30 @@ class AdventureSettingsPacket extends DataPacket implements ClientboundPacket, S
 	}
 
 
- public static function fromAbilitiesData(AbilitiesData $data, bool $autoJump = true) : self{
-  $result = new self();
-  $result->commandPermission = $data->getCommandPermission();
-  $result->playerPermission = $data->getPlayerPermission();
-  $result->entityUniqueId = $data->getTargetActorUniqueId();
-  $result->setFlag(self::AUTO_JUMP, $autoJump);
-  $abilities = [];
-  foreach($data->getAbilityLayers() as $layer){ $abilities = array_replace($abilities, $layer->getBoolAbilities()); }
-  foreach([
-   self::ALLOW_FLIGHT => AbilitiesLayer::ABILITY_ALLOW_FLIGHT,
-   self::FLYING => AbilitiesLayer::ABILITY_FLYING,
-   self::NO_CLIP => AbilitiesLayer::ABILITY_NO_CLIP,
-   self::MUTED => AbilitiesLayer::ABILITY_MUTED,
-   self::WORLD_BUILDER => AbilitiesLayer::ABILITY_WORLD_BUILDER,
-   self::BUILD_AND_MINE => AbilitiesLayer::ABILITY_BUILD,
-   self::DOORS_AND_SWITCHES => AbilitiesLayer::ABILITY_DOORS_AND_SWITCHES,
-   self::OPEN_CONTAINERS => AbilitiesLayer::ABILITY_OPEN_CONTAINERS,
-   self::ATTACK_PLAYERS => AbilitiesLayer::ABILITY_ATTACK_PLAYERS,
-   self::ATTACK_MOBS => AbilitiesLayer::ABILITY_ATTACK_MOBS,
-   self::OPERATOR => AbilitiesLayer::ABILITY_OPERATOR,
-   self::TELEPORT => AbilitiesLayer::ABILITY_TELEPORT
-  ] as $flag => $ability){ $result->setFlag($flag, $abilities[$ability] ?? false); }
-  return $result;
- }
+	public static function fromAbilitiesData(AbilitiesData $data, bool $autoJump = true) : self{
+		$result = new self();
+		$result->commandPermission = $data->getCommandPermission();
+		$result->playerPermission = $data->getPlayerPermission();
+		$result->entityUniqueId = $data->getTargetActorUniqueId();
+		$result->setFlag(self::AUTO_JUMP, $autoJump);
+		$abilities = [];
+		foreach($data->getAbilityLayers() as $layer){ $abilities = array_replace($abilities, $layer->getBoolAbilities()); }
+		foreach([
+			self::ALLOW_FLIGHT => AbilitiesLayer::ABILITY_ALLOW_FLIGHT,
+			self::FLYING => AbilitiesLayer::ABILITY_FLYING,
+			self::NO_CLIP => AbilitiesLayer::ABILITY_NO_CLIP,
+			self::MUTED => AbilitiesLayer::ABILITY_MUTED,
+			self::WORLD_BUILDER => AbilitiesLayer::ABILITY_WORLD_BUILDER,
+			self::BUILD_AND_MINE => AbilitiesLayer::ABILITY_BUILD,
+			self::DOORS_AND_SWITCHES => AbilitiesLayer::ABILITY_DOORS_AND_SWITCHES,
+			self::OPEN_CONTAINERS => AbilitiesLayer::ABILITY_OPEN_CONTAINERS,
+			self::ATTACK_PLAYERS => AbilitiesLayer::ABILITY_ATTACK_PLAYERS,
+			self::ATTACK_MOBS => AbilitiesLayer::ABILITY_ATTACK_MOBS,
+			self::OPERATOR => AbilitiesLayer::ABILITY_OPERATOR,
+			self::TELEPORT => AbilitiesLayer::ABILITY_TELEPORT
+		] as $flag => $ability){ $result->setFlag($flag, $abilities[$ability] ?? false); }
+		return $result;
+	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{
 		return $handler->handleAdventureSettings($this);

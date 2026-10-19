@@ -11,7 +11,7 @@ use pocketmine\network\mcpe\protocol\types\entity\MetadataProperty;
 
 /** Explicit wire-ID projection for the 419 metadata schema. Unknown newer fields are omitted. */
 final class Legacy419EntityMetadata{
- private const PROPERTIES = [
+	private const PROPERTIES = [
 		Properties::HEALTH => 1,
 		Properties::VARIANT => 2,
 		Properties::NAMETAG => 4,
@@ -101,8 +101,8 @@ final class Legacy419EntityMetadata{
 		Properties::AMBIENT_SOUND_INTERVAL_MIN => 107,
 		Properties::AMBIENT_SOUND_INTERVAL_RANGE => 108,
 		Properties::AMBIENT_SOUND_EVENT => 109,
- ];
- private const FLAGS = [
+	];
+	private const FLAGS = [
 		Flags::ONFIRE => 0,
 		Flags::SNEAKING => 1,
 		Flags::RIDING => 2,
@@ -197,44 +197,44 @@ final class Legacy419EntityMetadata{
 		Flags::CELEBRATING => 92,
 		Flags::ADMIRING => 93,
 		Flags::CELEBRATING_SPECIAL => 94,
- ];
- /** @param array<int, MetadataProperty> $metadata @return array<int, MetadataProperty> */
- public static function fromCurrent(array $metadata) : array{
-  $result = [];
-  foreach(self::PROPERTIES as $current => $legacy){
-   if(isset($metadata[$current])){ $result[$legacy] = $metadata[$current]; }
-  }
-  if(isset($metadata[Properties::FLAGS]) || isset($metadata[Properties::FLAGS2])){
-   $source = [$metadata[Properties::FLAGS] ?? new LongMetadataProperty(0), $metadata[Properties::FLAGS2] ?? new LongMetadataProperty(0)];
-   $bits = [0, 0];
-   foreach(self::FLAGS as $current => $legacy){
-    if((($source[intdiv($current, 64)] ?? new LongMetadataProperty(0))->getValue() & (1 << ($current % 64))) !== 0){
-     $bits[intdiv($legacy, 64)] |= 1 << ($legacy % 64);
-    }
-   }
-   $result[0] = new LongMetadataProperty($bits[0]);
-   $result[91] = new LongMetadataProperty($bits[1]);
-  }
-  return $result;
- }
- /** @param array<int, MetadataProperty> $metadata @return array<int, MetadataProperty> */
- public static function toCurrent(array $metadata) : array{
-  $result = [];
-  foreach(self::PROPERTIES as $current => $legacy){
-   if(isset($metadata[$legacy])){ $result[$current] = $metadata[$legacy]; }
-  }
-  if(isset($metadata[0]) || isset($metadata[91])){
-   $source = [$metadata[0] ?? new LongMetadataProperty(0), $metadata[91] ?? new LongMetadataProperty(0)];
-   $bits = [0, 0];
-   foreach(self::FLAGS as $current => $legacy){
-    if(($source[intdiv($legacy, 64)]->getValue() & (1 << ($legacy % 64))) !== 0){
-     $bits[intdiv($current, 64)] |= 1 << ($current % 64);
-    }
-   }
-   $result[Properties::FLAGS] = new LongMetadataProperty($bits[0]);
-   $result[Properties::FLAGS2] = new LongMetadataProperty($bits[1]);
-  }
-  return $result;
- }
+	];
+	/** @param array<int, MetadataProperty> $metadata @return array<int, MetadataProperty> */
+	public static function fromCurrent(array $metadata) : array{
+		$result = [];
+		foreach(self::PROPERTIES as $current => $legacy){
+			if(isset($metadata[$current])){ $result[$legacy] = $metadata[$current]; }
+		}
+		if(isset($metadata[Properties::FLAGS]) || isset($metadata[Properties::FLAGS2])){
+			$source = [$metadata[Properties::FLAGS] ?? new LongMetadataProperty(0), $metadata[Properties::FLAGS2] ?? new LongMetadataProperty(0)];
+			$bits = [0, 0];
+			foreach(self::FLAGS as $current => $legacy){
+				if((($source[intdiv($current, 64)] ?? new LongMetadataProperty(0))->getValue() & (1 << ($current % 64))) !== 0){
+					$bits[intdiv($legacy, 64)] |= 1 << ($legacy % 64);
+				}
+			}
+			$result[0] = new LongMetadataProperty($bits[0]);
+			$result[91] = new LongMetadataProperty($bits[1]);
+		}
+		return $result;
+	}
+	/** @param array<int, MetadataProperty> $metadata @return array<int, MetadataProperty> */
+	public static function toCurrent(array $metadata) : array{
+		$result = [];
+		foreach(self::PROPERTIES as $current => $legacy){
+			if(isset($metadata[$legacy])){ $result[$current] = $metadata[$legacy]; }
+		}
+		if(isset($metadata[0]) || isset($metadata[91])){
+			$source = [$metadata[0] ?? new LongMetadataProperty(0), $metadata[91] ?? new LongMetadataProperty(0)];
+			$bits = [0, 0];
+			foreach(self::FLAGS as $current => $legacy){
+				if(($source[intdiv($legacy, 64)]->getValue() & (1 << ($legacy % 64))) !== 0){
+					$bits[intdiv($current, 64)] |= 1 << ($current % 64);
+				}
+			}
+			$result[Properties::FLAGS] = new LongMetadataProperty($bits[0]);
+			$result[Properties::FLAGS2] = new LongMetadataProperty($bits[1]);
+		}
+		return $result;
+	}
 
 }
