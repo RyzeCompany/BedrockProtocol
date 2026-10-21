@@ -51,4 +51,9 @@ The original upstream contributors, source licenses, and compatibility-oriented 
 La constante `PROTOCOL_1_16_100` y `ProtocolTransportInfo` describen el transporte
 419; `LegacyLoginPacketDecoder` valida su Login inicial ya descomprimido usando
 los lectores nativos. Esta primera etapa no añade 419 a `ACCEPTED_PROTOCOL`.
-Los paquetes de juego y las pruebas con clientes reales siguen pendientes.
+La integración incluye los formatos de entrada, terreno, jugadores, skins,
+inventarios, solicitudes/respuestas de stacks y recetas, con traducción de IDs
+419 al modelo nativo sin modificar los objetos enviados a sesiones modernas.
+Los fixtures de inventario y paquetes opcionales usan el adaptador `v419` del ZIP
+MultiVersion como referencia. Las pruebas con clientes reales siguen siendo
+necesarias antes de declarar 419 estable.

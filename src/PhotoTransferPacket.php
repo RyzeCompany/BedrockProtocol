@@ -58,6 +58,12 @@ class PhotoTransferPacket extends DataPacket implements ClientboundPacket{
 		$this->photoName = CommonTypes::getString($in);
 		$this->photoData = CommonTypes::getString($in);
 		$this->bookId = CommonTypes::getString($in);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->type = $this->sourceType = 0;
+			$this->ownerActorUniqueId = -1;
+			$this->newPhotoName = "";
+			return;
+		}
 		$this->type = Byte::readUnsigned($in);
 		$this->sourceType = Byte::readUnsigned($in);
 		$this->ownerActorUniqueId = LE::readSignedLong($in); //...............
@@ -68,6 +74,9 @@ class PhotoTransferPacket extends DataPacket implements ClientboundPacket{
 		CommonTypes::putString($out, $this->photoName);
 		CommonTypes::putString($out, $this->photoData);
 		CommonTypes::putString($out, $this->bookId);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
+		}
 		Byte::writeUnsigned($out, $this->type);
 		Byte::writeUnsigned($out, $this->sourceType);
 		LE::writeSignedLong($out, $this->ownerActorUniqueId);

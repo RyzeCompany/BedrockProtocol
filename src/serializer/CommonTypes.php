@@ -534,6 +534,14 @@ final class CommonTypes{
 
 	/** @throws DataDecodeException */
 	public static function getRecipeIngredient(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : RecipeIngredient{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$id = VarInt::readSignedInt($in);
+			if($id === 0){
+				return new RecipeIngredient(null, 0);
+			}
+			$meta = VarInt::readSignedInt($in);
+			return new RecipeIngredient(new IntIdMetaItemDescriptor($id, $meta), VarInt::readSignedInt($in));
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$variant = Byte::readUnsigned($in);
 			if($variant === 0){
@@ -571,6 +579,20 @@ final class CommonTypes{
 	}
 
 	public static function putRecipeIngredient(ByteBufferWriter $out, RecipeIngredient $ingredient, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$descriptor = $ingredient->getDescriptor();
+			if($descriptor === null || ($descriptor instanceof IntIdMetaItemDescriptor && $descriptor->getId() === 0)){
+				VarInt::writeSignedInt($out, 0);
+				return;
+			}
+			if(!$descriptor instanceof IntIdMetaItemDescriptor){
+				throw new \InvalidArgumentException("Legacy recipes require numeric item IDs");
+			}
+			VarInt::writeSignedInt($out, $descriptor->getId());
+			VarInt::writeSignedInt($out, $descriptor->getMeta() === -1 ? 0x7fff : $descriptor->getMeta());
+			VarInt::writeSignedInt($out, $ingredient->getCount());
+			return;
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$descriptor = $ingredient->getDescriptor();
 			if($descriptor === null){

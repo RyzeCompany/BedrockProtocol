@@ -96,7 +96,13 @@ final class ItemStackRequest{
 			}else{
 				$typeId = Byte::readUnsigned($in);
 			}
+			if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+				$typeId = ItemStackRequestActionType::INNER_TYPES_1_26_40[$typeId] ?? throw new PacketDecodeException("Unhandled legacy item stack action $typeId");
+			}
 			$actions[] = self::readAction($in, $protocolId, $typeId);
+		}
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return new self($requestId, $actions, [], 0);
 		}
 		$filterStrings = [];
 		for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
@@ -118,8 +124,17 @@ final class ItemStackRequest{
 				}
 				VarInt::writeUnsignedInt($out, $outerTypeId);
 			}
+			if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+				$typeId = array_search($typeId, ItemStackRequestActionType::INNER_TYPES_1_26_40, true);
+				if($typeId === false){
+					throw new \InvalidArgumentException("Unsupported legacy item stack action");
+				}
+			}
 			Byte::writeUnsigned($out, $typeId);
 			$action->write($out, $protocolId);
+		}
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
 		}
 		VarInt::writeUnsignedInt($out, count($this->filterStrings));
 		foreach($this->filterStrings as $string){

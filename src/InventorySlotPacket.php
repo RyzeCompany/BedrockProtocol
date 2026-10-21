@@ -58,6 +58,11 @@ class InventorySlotPacket extends DataPacket implements ClientboundPacket{
 			$this->storage = CommonTypes::readOptional($in, CommonTypes::getNetworkItemStackDescriptor(...));
 			$this->item = CommonTypes::getNetworkItemStackDescriptor($in);
 		}else{
+			if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+				$this->containerName = new FullContainerName(0);
+				$this->dynamicContainerSize = 0;
+				$this->storage = null;
+			}
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
 				$this->containerName = FullContainerName::read($in, $protocolId);
 				if($protocolId >= ProtocolInfo::PROTOCOL_1_21_40){
@@ -68,7 +73,11 @@ class InventorySlotPacket extends DataPacket implements ClientboundPacket{
 			}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 				$this->containerName = new FullContainerName(0, VarInt::readUnsignedInt($in));
 			}
+			$stackId = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? VarInt::readSignedInt($in) : null;
 			$this->item = CommonTypes::getItemStackWrapper($in, $protocolId);
+			if($stackId !== null){
+				$this->item = new ItemStackWrapper($stackId, $this->item->getItemStack());
+			}
 		}
 	}
 
@@ -97,6 +106,9 @@ class InventorySlotPacket extends DataPacket implements ClientboundPacket{
 				}
 			}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 				VarInt::writeUnsignedInt($out, $this->containerName->getDynamicId() ?? 0);
+			}
+			if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+				VarInt::writeSignedInt($out, $this->item->getStackId());
 			}
 			CommonTypes::putItemStackWrapper($out, $this->item, $protocolId);
 		}

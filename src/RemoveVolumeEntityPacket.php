@@ -40,12 +40,14 @@ class RemoveVolumeEntityPacket extends DataPacket implements ClientboundPacket{
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->entityNetId = VarInt::readUnsignedInt($in);
-		$this->dimension = VarInt::readSignedInt($in);
+		$this->dimension = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? 0 : VarInt::readSignedInt($in);
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeUnsignedInt($out, $this->entityNetId);
-		VarInt::writeSignedInt($out, $this->dimension);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			VarInt::writeSignedInt($out, $this->dimension);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{
