@@ -98,7 +98,7 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		$this->pitch = LE::readFloat($in);
 		$this->yaw = LE::readFloat($in);
 		$this->headYaw = LE::readFloat($in);
-		$this->bodyYaw = LE::readFloat($in);
+		$this->bodyYaw = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? $this->yaw : LE::readFloat($in);
 
 		$attrCount = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $attrCount; ++$i){
@@ -110,7 +110,7 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		}
 
 		$this->metadata = CommonTypes::getEntityMetadata($in, $protocolId);
-		$this->syncedProperties = PropertySyncData::read($in);
+		$this->syncedProperties = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? new PropertySyncData([], []) : PropertySyncData::read($in);
 
 		$linkCount = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $linkCount; ++$i){
@@ -127,7 +127,9 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		LE::writeFloat($out, $this->pitch);
 		LE::writeFloat($out, $this->yaw);
 		LE::writeFloat($out, $this->headYaw);
-		LE::writeFloat($out, $this->bodyYaw);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			LE::writeFloat($out, $this->bodyYaw);
+		}
 
 		VarInt::writeUnsignedInt($out, count($this->attributes));
 		foreach($this->attributes as $attribute){
@@ -138,7 +140,9 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		}
 
 		CommonTypes::putEntityMetadata($out, $this->metadata, $protocolId);
-		$this->syncedProperties->write($out);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			$this->syncedProperties->write($out);
+		}
 
 		VarInt::writeUnsignedInt($out, count($this->links));
 		foreach($this->links as $link){

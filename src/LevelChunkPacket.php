@@ -43,7 +43,7 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 
 	private ChunkPosition $chunkPosition;
 	/** @phpstan-var DimensionIds::* */
-	private int $dimensionId;
+		private int $dimensionId;
 	private int $subChunkCount;
 	private bool $clientSubChunkRequestsEnabled;
 	/** @var int[]|null */
@@ -102,6 +102,9 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 		$this->chunkPosition = ChunkPosition::read($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
 			$this->dimensionId = VarInt::readSignedInt($in);
+		}else{
+			// The dimension is carried by session state in older protocols.
+			$this->dimensionId = DimensionIds::OVERWORLD;
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$this->subChunkCount = VarInt::readUnsignedInt($in);
@@ -122,6 +125,9 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 		}
 
 		$subChunkCountButNotReally = VarInt::readUnsignedInt($in);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100 && $subChunkCountButNotReally > 16){
+			throw new PacketDecodeException("419 does not support subchunk requests or columns taller than 16 subchunks");
+		}
 		if($subChunkCountButNotReally === self::CLIENT_REQUEST_FULL_COLUMN_FAKE_COUNT){
 			$this->clientSubChunkRequestsEnabled = true;
 			$this->subChunkCount = PHP_INT_MAX;
@@ -148,6 +154,9 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100 && ($this->clientSubChunkRequestsEnabled || $this->subChunkCount < 0 || $this->subChunkCount > 16)){
+			throw new \InvalidArgumentException("419 requires a complete column of at most 16 subchunks");
+		}
 		$this->chunkPosition->write($out);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
 			VarInt::writeSignedInt($out, $this->dimensionId);

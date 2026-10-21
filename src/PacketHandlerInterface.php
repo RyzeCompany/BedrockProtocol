@@ -370,6 +370,8 @@ interface PacketHandlerInterface{
 
 	public function handleUpdateAbilities(UpdateAbilitiesPacket $packet) : bool;
 
+	public function handleAdventureSettings(AdventureSettingsPacket $packet) : bool;
+
 	public function handleUpdateAdventureSettings(UpdateAdventureSettingsPacket $packet) : bool;
 
 	public function handleDeathInfo(DeathInfoPacket $packet) : bool;

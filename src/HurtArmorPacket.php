@@ -39,13 +39,15 @@ class HurtArmorPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->cause = VarInt::readSignedInt($in);
 		$this->health = VarInt::readSignedInt($in);
-		$this->armorSlotFlags = VarInt::readUnsignedLong($in);
+		$this->armorSlotFlags = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? 0 : VarInt::readUnsignedLong($in);
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeSignedInt($out, $this->cause);
 		VarInt::writeSignedInt($out, $this->health);
-		VarInt::writeUnsignedLong($out, $this->armorSlotFlags);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			VarInt::writeUnsignedLong($out, $this->armorSlotFlags);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

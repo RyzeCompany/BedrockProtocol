@@ -48,7 +48,7 @@ class SpawnParticleEffectPacket extends DataPacket implements ClientboundPacket{
 		$this->actorUniqueId = CommonTypes::getActorUniqueId($in);
 		$this->position = CommonTypes::getVector3($in);
 		$this->particleName = CommonTypes::getString($in);
-		$this->molangVariablesJson = CommonTypes::getBool($in) ? CommonTypes::getString($in) : null;
+		$this->molangVariablesJson = $protocolId !== ProtocolInfo::PROTOCOL_1_16_100 && CommonTypes::getBool($in) ? CommonTypes::getString($in) : null;
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -56,6 +56,9 @@ class SpawnParticleEffectPacket extends DataPacket implements ClientboundPacket{
 		CommonTypes::putActorUniqueId($out, $this->actorUniqueId);
 		CommonTypes::putVector3($out, $this->position);
 		CommonTypes::putString($out, $this->particleName);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
+		}
 		CommonTypes::putBool($out, $this->molangVariablesJson !== null);
 		if($this->molangVariablesJson !== null){
 			CommonTypes::putString($out, $this->molangVariablesJson);

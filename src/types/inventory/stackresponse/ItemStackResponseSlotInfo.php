@@ -57,6 +57,9 @@ final class ItemStackResponseSlotInfo{
 		}else{
 			$itemStackId = CommonTypes::readServerItemStackId($in);
 		}
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return new self($slot, $hotbarSlot, $count, $itemStackId, '', '', 0);
+		}
 		$customName = CommonTypes::getString($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$filteredCustomName = CommonTypes::readOptional($in, CommonTypes::getString(...));
@@ -77,6 +80,9 @@ final class ItemStackResponseSlotInfo{
 			CommonTypes::writeDoubleOptional($out, $this->itemStackId, CommonTypes::writeServerItemStackId(...));
 		}else{
 			CommonTypes::writeServerItemStackId($out, $this->itemStackId);
+		}
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
 		}
 		CommonTypes::putString($out, $this->customName);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){

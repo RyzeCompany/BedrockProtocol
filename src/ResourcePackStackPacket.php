@@ -51,6 +51,11 @@ class ResourcePackStackPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->useVanillaEditorPacks = false;
+			$this->behaviorPackStack = [];
+			$this->resourcePackStack = [];
+		}
 		$this->mustAccept = CommonTypes::getBool($in);
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_21_124){
 			$behaviorPackCount = VarInt::readUnsignedInt($in);
@@ -85,7 +90,7 @@ class ResourcePackStackPacket extends DataPacket implements ClientboundPacket{
 			$entry->write($out);
 		}
 
-		CommonTypes::putString($out, $this->baseGameVersion);
+		CommonTypes::putString($out, $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? "1.16.100" : $this->baseGameVersion);
 		$this->experiments->write($out);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_80){
 			CommonTypes::putBool($out, $this->useVanillaEditorPacks);

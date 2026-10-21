@@ -72,8 +72,8 @@ class SetTitlePacket extends DataPacket implements ClientboundPacket{
 		$this->fadeInTime = VarInt::readSignedInt($in);
 		$this->stayTime = VarInt::readSignedInt($in);
 		$this->fadeOutTime = VarInt::readSignedInt($in);
-		$this->xuid = CommonTypes::getString($in);
-		$this->platformOnlineId = CommonTypes::getString($in);
+		$this->xuid = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? "" : CommonTypes::getString($in);
+		$this->platformOnlineId = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? "" : CommonTypes::getString($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 			$this->filteredTitleText = CommonTypes::getString($in);
 		}
@@ -85,8 +85,10 @@ class SetTitlePacket extends DataPacket implements ClientboundPacket{
 		VarInt::writeSignedInt($out, $this->fadeInTime);
 		VarInt::writeSignedInt($out, $this->stayTime);
 		VarInt::writeSignedInt($out, $this->fadeOutTime);
-		CommonTypes::putString($out, $this->xuid);
-		CommonTypes::putString($out, $this->platformOnlineId);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			CommonTypes::putString($out, $this->xuid);
+			CommonTypes::putString($out, $this->platformOnlineId);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 			CommonTypes::putString($out, $this->filteredTitleText);
 		}

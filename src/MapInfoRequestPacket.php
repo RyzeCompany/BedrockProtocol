@@ -44,6 +44,9 @@ class MapInfoRequestPacket extends DataPacket implements ServerboundPacket{
 		$this->mapId = CommonTypes::getActorUniqueId($in);
 
 		$this->clientPixels = [];
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
+		}
 		$count = LE::readUnsignedInt($in);
 		if($count > MapImage::MAX_HEIGHT * MapImage::MAX_WIDTH){
 			throw new PacketDecodeException("Too many pixels");
@@ -56,6 +59,9 @@ class MapInfoRequestPacket extends DataPacket implements ServerboundPacket{
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorUniqueId($out, $this->mapId);
 
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
+		}
 		LE::writeUnsignedInt($out, count($this->clientPixels));
 		foreach($this->clientPixels as $pixel){
 			$pixel->write($out);

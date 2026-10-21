@@ -22,6 +22,7 @@ use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\resourcepacks\BehaviorPackInfoEntry;
 use pocketmine\network\mcpe\protocol\types\resourcepacks\ResourcePackInfoEntry;
 use Ramsey\Uuid\UuidInterface;
+use Ramsey\Uuid\Uuid;
 use function count;
 
 class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
@@ -87,13 +88,22 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 	public function isForceDisableVibrantVisuals() : bool{ return $this->forceDisableVibrantVisuals; }
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->worldTemplateId = Uuid::fromString("00000000-0000-0000-0000-000000000000");
+			$this->worldTemplateVersion = "";
+			$this->forceDisableVibrantVisuals = false;
+			$this->hasAddons = false;
+			$this->resourcePackEntries = [];
+			$this->behaviorPackEntries = [];
+			$this->cdnUrls = [];
+		}
 		$this->mustAccept = CommonTypes::getBool($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_70){
 			$this->hasAddons = CommonTypes::getBool($in);
 		}
 		$this->hasScripts = CommonTypes::getBool($in);
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_21_20){
-			$this->forceServerPacks = CommonTypes::getBool($in);
+			$this->forceServerPacks = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? false : CommonTypes::getBool($in);
 			$behaviorPackCount = LE::readUnsignedShort($in);
 			while($behaviorPackCount-- > 0){
 				$this->behaviorPackEntries[] = BehaviorPackInfoEntry::read($in, $protocolId);
@@ -129,7 +139,9 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 		}
 		CommonTypes::putBool($out, $this->hasScripts);
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_21_20){
-			CommonTypes::putBool($out, $this->forceServerPacks);
+			if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+				CommonTypes::putBool($out, $this->forceServerPacks);
+			}
 			LE::writeUnsignedShort($out, count($this->behaviorPackEntries));
 			foreach($this->behaviorPackEntries as $entry){
 				$entry->write($out, $protocolId);

@@ -80,6 +80,13 @@ class AddVolumeEntityPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->entityNetId = VarInt::readUnsignedInt($in);
 		$this->data = new CacheableNbt(CommonTypes::getNbtCompoundRoot($in));
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$this->jsonIdentifier = $this->instanceName = $this->engineVersion = "";
+			$this->minBound = new BlockPosition(0, 0, 0);
+			$this->maxBound = new BlockPosition(0, 0, 0);
+			$this->dimension = 0;
+			return;
+		}
 		$this->jsonIdentifier = CommonTypes::getString($in);
 		$this->instanceName = CommonTypes::getString($in);
 		$this->minBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
@@ -91,6 +98,9 @@ class AddVolumeEntityPacket extends DataPacket implements ClientboundPacket{
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeUnsignedInt($out, $this->entityNetId);
 		$out->writeByteArray($this->data->getEncodedNbt());
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return;
+		}
 		CommonTypes::putString($out, $this->jsonIdentifier);
 		CommonTypes::putString($out, $this->instanceName);
 		CommonTypes::putBlockPosition($out, $this->minBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);

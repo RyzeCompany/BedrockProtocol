@@ -106,6 +106,8 @@ final class ProtocolInfo{
 	public const PROTOCOL_1_20_30 = 618;
 	public const PROTOCOL_1_20_10 = 594;
 	public const PROTOCOL_1_20_0 = 589;
+	/** Known legacy wire format; not accepted until its gameplay adapters are complete. */
+	public const PROTOCOL_1_16_100 = 419;
 
 	public const LOGIN_PACKET = 0x01;
 	public const PLAY_STATUS_PACKET = 0x02;

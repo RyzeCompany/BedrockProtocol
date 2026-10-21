@@ -122,7 +122,7 @@ final class CommonTypes{
 	/** @throws DataDecodeException */
 	public static function getSkin(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : SkinData{
 		$skinId = self::getString($in);
-		$skinPlayFabId = self::getString($in);
+		$skinPlayFabId = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? "" : self::getString($in);
 		$skinResourcePatch = self::getString($in);
 		$skinData = self::getSkinImage($in);
 		$animationCount = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? VarInt::readUnsignedInt($in) : LE::readUnsignedInt($in);
@@ -136,8 +136,13 @@ final class CommonTypes{
 		}
 		$capeData = self::getSkinImage($in);
 		$geometryData = self::getString($in);
-		$geometryDataVersion = self::getString($in);
+		$geometryDataVersion = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? "" : self::getString($in);
 		$animationData = self::getString($in);
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$premium = self::getBool($in);
+			$persona = self::getBool($in);
+			$capeOnClassic = self::getBool($in);
+		}
 		$capeId = self::getString($in);
 		$fullSkinId = self::getString($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
@@ -183,11 +188,13 @@ final class CommonTypes{
 			);
 		}
 
-		$premium = self::getBool($in);
-		$persona = self::getBool($in);
-		$capeOnClassic = self::getBool($in);
-		$isPrimaryUser = self::getBool($in);
-		$override = self::getBool($in);
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			$premium = self::getBool($in);
+			$persona = self::getBool($in);
+			$capeOnClassic = self::getBool($in);
+		}
+		$isPrimaryUser = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? false : self::getBool($in);
+		$override = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? false : self::getBool($in);
 		$trustedSkinFlag = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? self::getString($in) : null;
 		$profileHash = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? self::getString($in) : "";
 
@@ -220,7 +227,9 @@ final class CommonTypes{
 
 	public static function putSkin(ByteBufferWriter $out, SkinData $skin, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		self::putString($out, $skin->getSkinId());
-		self::putString($out, $skin->getPlayFabId());
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			self::putString($out, $skin->getPlayFabId());
+		}
 		self::putString($out, $skin->getResourcePatch());
 		self::putSkinImage($out, $skin->getSkinImage());
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
@@ -244,8 +253,15 @@ final class CommonTypes{
 		}
 		self::putSkinImage($out, $skin->getCapeImage());
 		self::putString($out, $skin->getGeometryData());
-		self::putString($out, $skin->getGeometryDataEngineVersion());
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			self::putString($out, $skin->getGeometryDataEngineVersion());
+		}
 		self::putString($out, $skin->getAnimationData());
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			self::putBool($out, $skin->isPremium());
+			self::putBool($out, $skin->isPersona());
+			self::putBool($out, $skin->isPersonaCapeOnClassic());
+		}
 		self::putString($out, $skin->getCapeId());
 		self::putString($out, $skin->getFullSkinId());
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
@@ -292,11 +308,13 @@ final class CommonTypes{
 				}
 			}
 		}
-		self::putBool($out, $skin->isPremium());
-		self::putBool($out, $skin->isPersona());
-		self::putBool($out, $skin->isPersonaCapeOnClassic());
-		self::putBool($out, $skin->isPrimaryUser());
-		self::putBool($out, $skin->isOverride());
+		if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+			self::putBool($out, $skin->isPremium());
+			self::putBool($out, $skin->isPersona());
+			self::putBool($out, $skin->isPersonaCapeOnClassic());
+			self::putBool($out, $skin->isPrimaryUser());
+			self::putBool($out, $skin->isOverride());
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			self::putString($out, $skin->getTrustedSkinFlag());
 			self::putString($out, $skin->getProfileHash());
@@ -384,6 +402,9 @@ final class CommonTypes{
 	 * @throws DataDecodeException
 	 */
 	public static function getItemStackWithoutStackId(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : ItemStack{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return Legacy419ItemStackCodec::read($in);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$id = VarInt::readSignedInt($in);
 			$count = LE::readUnsignedShort($in);
@@ -399,6 +420,10 @@ final class CommonTypes{
 	}
 
 	public static function putItemStackWithoutStackId(ByteBufferWriter $out, ItemStack $itemStack, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			Legacy419ItemStackCodec::write($out, $itemStack);
+			return;
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			VarInt::writeSignedInt($out, $itemStack->getId());
 			LE::writeUnsignedShort($out, $itemStack->getCount());
@@ -414,6 +439,9 @@ final class CommonTypes{
 
 	/** @throws DataDecodeException */
 	public static function getItemStackWrapper(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : ItemStackWrapper{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			return new ItemStackWrapper(0, Legacy419ItemStackCodec::read($in));
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$id = LE::readSignedShort($in);
 			$count = LE::readUnsignedShort($in);
@@ -440,6 +468,10 @@ final class CommonTypes{
 	}
 
 	public static function putItemStackWrapper(ByteBufferWriter $out, ItemStackWrapper $itemStackWrapper, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			Legacy419ItemStackCodec::write($out, $itemStackWrapper->getItemStack());
+			return;
+		}
 		$itemStack = $itemStackWrapper->getItemStack();
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			LE::writeSignedShort($out, $itemStack->getId());
@@ -502,6 +534,14 @@ final class CommonTypes{
 
 	/** @throws DataDecodeException */
 	public static function getRecipeIngredient(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : RecipeIngredient{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$id = VarInt::readSignedInt($in);
+			if($id === 0){
+				return new RecipeIngredient(null, 0);
+			}
+			$meta = VarInt::readSignedInt($in);
+			return new RecipeIngredient(new IntIdMetaItemDescriptor($id, $meta), VarInt::readSignedInt($in));
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$variant = Byte::readUnsigned($in);
 			if($variant === 0){
@@ -539,6 +579,20 @@ final class CommonTypes{
 	}
 
 	public static function putRecipeIngredient(ByteBufferWriter $out, RecipeIngredient $ingredient, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$descriptor = $ingredient->getDescriptor();
+			if($descriptor === null || ($descriptor instanceof IntIdMetaItemDescriptor && $descriptor->getId() === 0)){
+				VarInt::writeSignedInt($out, 0);
+				return;
+			}
+			if(!$descriptor instanceof IntIdMetaItemDescriptor){
+				throw new \InvalidArgumentException("Legacy recipes require numeric item IDs");
+			}
+			VarInt::writeSignedInt($out, $descriptor->getId());
+			VarInt::writeSignedInt($out, $descriptor->getMeta() === -1 ? 0x7fff : $descriptor->getMeta());
+			VarInt::writeSignedInt($out, $ingredient->getCount());
+			return;
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$descriptor = $ingredient->getDescriptor();
 			if($descriptor === null){
@@ -668,6 +722,9 @@ final class CommonTypes{
 	 * @phpstan-param array<int, MetadataProperty> $metadata
 	 */
 	public static function putEntityMetadata(ByteBufferWriter $out, array $metadata, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
+		if($protocolId === ProtocolInfo::PROTOCOL_1_16_100){
+			$metadata = Legacy419EntityMetadata::fromCurrent($metadata);
+		}
 		VarInt::writeUnsignedInt($out, count($metadata));
 		foreach($metadata as $key => $d){
 			VarInt::writeUnsignedInt($out, $key);
@@ -813,7 +870,7 @@ final class CommonTypes{
 		$rules = [];
 		for($i = 0; $i < $count; ++$i){
 			$name = self::getString($in);
-			$isPlayerModifiable = self::getBool($in);
+			$isPlayerModifiable = $protocolId === ProtocolInfo::PROTOCOL_1_16_100 ? false : self::getBool($in);
 			$type = VarInt::readUnsignedInt($in);
 			$rules[$name] = self::readGameRule($in, $protocolId, $type, $isPlayerModifiable, $isStartGame);
 		}
@@ -831,7 +888,9 @@ final class CommonTypes{
 		VarInt::writeUnsignedInt($out, count($rules));
 		foreach($rules as $name => $rule){
 			self::putString($out, $name);
-			self::putBool($out, $rule->isPlayerModifiable());
+			if($protocolId !== ProtocolInfo::PROTOCOL_1_16_100){
+				self::putBool($out, $rule->isPlayerModifiable());
+			}
 			VarInt::writeUnsignedInt($out, $rule->getTypeId());
 			$rule->encode($out, $protocolId, $isStartGame);
 		}
