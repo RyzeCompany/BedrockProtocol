@@ -49,6 +49,8 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 	/** @var int[]|null */
 	private ?array $usedBlobHashes = null;
 	private string $extraPayload;
+	/** 2225+ biome override flag, absent from older protocol versions. */
+	private bool $clientBiomeUpdate = false;
 
 	/**
 	 * @generate-create-func
@@ -98,6 +100,10 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 		return $this->extraPayload;
 	}
 
+	public function isClientBiomeUpdate() : bool{ return $this->clientBiomeUpdate; }
+
+	public function setClientBiomeUpdate(bool $value) : void{ $this->clientBiomeUpdate = $value; }
+
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->chunkPosition = ChunkPosition::read($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
@@ -118,6 +124,7 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 			}
 			$this->usedBlobHashes = $cacheEnabled ? $blobHashes : null;
 			$this->extraPayload = CommonTypes::getString($in);
+			$this->clientBiomeUpdate = $protocolId >= ProtocolInfo::PROTOCOL_1_26_60 ? CommonTypes::getBool($in) : false;
 			return;
 		}
 
@@ -164,6 +171,9 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 				LE::writeUnsignedLong($out, $hash);
 			}
 			CommonTypes::putString($out, $this->extraPayload);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+				CommonTypes::putBool($out, $this->clientBiomeUpdate);
+			}
 			return;
 		}
 
