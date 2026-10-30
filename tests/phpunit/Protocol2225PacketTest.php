@@ -47,6 +47,12 @@ final class Protocol2225PacketTest extends TestCase{
 		);
 	}
 
+	public function testMatchmakingCancelPacket() : void{
+		$this->assertRoundTrip(ServerboundMatchmakingCancelPacket::create(), function(ServerboundMatchmakingCancelPacket $packet) : void{
+			self::assertSame(356, $packet->pid());
+		});
+	}
+
 	public function testCursorDragStates() : void{
 		foreach([ServerboundCursorItemDragPacket::START, ServerboundCursorItemDragPacket::STOP] as $state){
 			$this->assertRoundTrip(
