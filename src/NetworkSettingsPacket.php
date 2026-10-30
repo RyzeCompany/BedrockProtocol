@@ -72,7 +72,11 @@ class NetworkSettingsPacket extends DataPacket implements ClientboundPacket{
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->compressionThreshold = LE::readUnsignedShort($in);
-		$this->compressionAlgorithm = LE::readUnsignedShort($in);
+		$rawAlgorithm = LE::readUnsignedShort($in);
+		// The wire value for NONE moved from 2 to 65535 in protocol 2225.
+		// Keep CompressionAlgorithm::NONE as the server-side stable enum value.
+		$this->compressionAlgorithm = $rawAlgorithm === ($protocolId >= ProtocolInfo::PROTOCOL_1_26_60 ? 65535 : 2)
+			? CompressionAlgorithm::NONE : $rawAlgorithm;
 		$this->enableClientThrottling = CommonTypes::getBool($in);
 		$this->clientThrottleThreshold = Byte::readUnsigned($in);
 		$this->clientThrottleScalar = LE::readFloat($in);
@@ -80,7 +84,9 @@ class NetworkSettingsPacket extends DataPacket implements ClientboundPacket{
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		LE::writeUnsignedShort($out, $this->compressionThreshold);
-		LE::writeUnsignedShort($out, $this->compressionAlgorithm);
+		LE::writeUnsignedShort($out, $this->compressionAlgorithm === CompressionAlgorithm::NONE
+			? ($protocolId >= ProtocolInfo::PROTOCOL_1_26_60 ? 65535 : 2)
+			: $this->compressionAlgorithm);
 		CommonTypes::putBool($out, $this->enableClientThrottling);
 		Byte::writeUnsigned($out, $this->clientThrottleThreshold);
 		LE::writeFloat($out, $this->clientThrottleScalar);
