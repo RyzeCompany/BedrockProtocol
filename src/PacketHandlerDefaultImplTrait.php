@@ -988,4 +988,8 @@ trait PacketHandlerDefaultImplTrait{
 	public function handleServerboundCursorItemDrag(ServerboundCursorItemDragPacket $packet) : bool{
 		return false;
 	}
+	public function handleServerboundMatchmakingCancel(ServerboundMatchmakingCancelPacket $packet) : bool{
+		return false;
+	}
+
 }
