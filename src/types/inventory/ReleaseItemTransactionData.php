@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types\inventory;
 
+use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
@@ -35,6 +36,8 @@ class ReleaseItemTransactionData extends TransactionData{
 	private int $hotbarSlot;
 	private ItemStackWrapper $itemInHand;
 	private Vector3 $headPosition;
+	/** 2225+: 0=mainhand, 1=offhand. */
+	private int $hand = 0;
 
 	public function getActionType() : int{
 		return $this->actionType;
@@ -52,6 +55,8 @@ class ReleaseItemTransactionData extends TransactionData{
 		return $this->headPosition;
 	}
 
+	public function getHand() : int{ return $this->hand; }
+
 	protected function decodeData(ByteBufferReader $in, int $protocolId) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$this->actionType = VarInt::readSignedInt($in);
@@ -67,6 +72,12 @@ class ReleaseItemTransactionData extends TransactionData{
 			$this->itemInHand = CommonTypes::getItemStackWrapper($in, $protocolId);
 		}
 		$this->headPosition = CommonTypes::getVector3($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			$this->hand = Byte::readUnsigned($in);
+			if($this->hand > 1){
+				throw new \pocketmine\network\mcpe\protocol\PacketDecodeException("Invalid item release hand");
+			}
+		}
 	}
 
 	protected function encodeData(ByteBufferWriter $out, int $protocolId) : void{
@@ -84,25 +95,32 @@ class ReleaseItemTransactionData extends TransactionData{
 			CommonTypes::putItemStackWrapper($out, $this->itemInHand, $protocolId);
 		}
 		CommonTypes::putVector3($out, $this->headPosition);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			Byte::writeUnsigned($out, $this->hand);
+		}
 	}
 
 	/**
 	 * @generate-create-func
 	 */
-	private static function initSelf(int $actionType, int $hotbarSlot, ItemStackWrapper $itemInHand, Vector3 $headPosition) : self{
+	private static function initSelf(int $actionType, int $hotbarSlot, ItemStackWrapper $itemInHand, Vector3 $headPosition, int $hand = 0) : self{
 		$result = new self;
 		$result->actionType = $actionType;
 		$result->hotbarSlot = $hotbarSlot;
 		$result->itemInHand = $itemInHand;
 		$result->headPosition = $headPosition;
+		if($hand < 0 || $hand > 1){
+			throw new \InvalidArgumentException("Invalid item release hand");
+		}
+		$result->hand = $hand;
 		return $result;
 	}
 
 	/**
 	 * @param NetworkInventoryAction[] $actions
 	 */
-	public static function new(array $actions, int $actionType, int $hotbarSlot, ItemStackWrapper $itemInHand, Vector3 $headPosition) : self{
-		$result = self::initSelf($actionType, $hotbarSlot, $itemInHand, $headPosition);
+		public static function new(array $actions, int $actionType, int $hotbarSlot, ItemStackWrapper $itemInHand, Vector3 $headPosition, int $hand = 0) : self{
+		$result = self::initSelf($actionType, $hotbarSlot, $itemInHand, $headPosition, $hand);
 		$result->actions = $actions;
 		return $result;
 	}
