@@ -134,4 +134,20 @@ final class Protocol2225PacketTest extends TestCase{
 		);
 	}
 
+	public function testSignedAudioPlaybackSharesPlaySoundWirePayload() : void{
+		$sound = PlaySoundPacket::create("note.play", 1.0, 2.0, 3.0, 0.5, 1.0, null);
+		$this->assertRoundTrip(
+			ClientboundPlayAudioContentPacket::createAudioContent("shared.jwt", "playback.jwt", "Sound", $sound),
+			function(ClientboundPlayAudioContentPacket $p) : void{
+				self::assertSame("shared.jwt", $p->getSharedMetadataJwt());
+				self::assertSame("playback.jwt", $p->getPlaybackContentJwt());
+				self::assertSame("Sound", $p->getPlaybackType());
+				self::assertSame("note.play", $p->soundName);
+				self::assertSame(1.0, $p->x);
+				self::assertSame(2.0, $p->y);
+				self::assertSame(3.0, $p->z);
+			}
+		);
+	}
+
 }
