@@ -1004,4 +1004,8 @@ trait PacketHandlerDefaultImplTrait{
 		return false;
 	}
 
+	public function handleClientboundPlayAudioContent(ClientboundPlayAudioContentPacket $packet) : bool{
+		return false;
+	}
+
 }
