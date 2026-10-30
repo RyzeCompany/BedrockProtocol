@@ -63,4 +63,27 @@ final class Protocol2225PacketTest extends TestCase{
 			);
 		}
 	}
+	public function testLevelChunkFlagOnlyForProtocol2225() : void{
+		$chunk = LevelChunkPacket::create(
+			new \pocketmine\network\mcpe\protocol\types\ChunkPosition(8, -7),
+			0,
+			0,
+			false,
+			null,
+			"test-chunk"
+		);
+		$chunk->setClientBiomeUpdate(true);
+		$legacyBuffer = new ByteBufferWriter();
+		$chunk->encode($legacyBuffer, ProtocolInfo::PROTOCOL_1_26_52);
+		$newBuffer = new ByteBufferWriter();
+		$chunk->encode($newBuffer, ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertSame($legacyBuffer->getData() . "\\x01", $newBuffer->getData());
+		$oldPacket = new LevelChunkPacket();
+		$oldPacket->decode(new ByteBufferReader($legacyBuffer->getData()), ProtocolInfo::PROTOCOL_1_26_52);
+		self::assertFalse($oldPacket->isClientBiomeUpdate());
+		$newPacket = new LevelChunkPacket();
+		$newPacket->decode(new ByteBufferReader($newBuffer->getData()), ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertTrue($newPacket->isClientBiomeUpdate());
+	}
+
 }
