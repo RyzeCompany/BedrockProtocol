@@ -495,4 +495,7 @@ interface PacketHandlerInterface{
 	public function handleSendPartyDestinationCookie(SendPartyDestinationCookiePacket $packet) : bool;
 
 	public function handlePartyDestinationCookieResponse(PartyDestinationCookieResponsePacket $packet) : bool;
+	public function handleServerboundStonecutterSetRecipe(ServerboundStonecutterSetRecipePacket $packet) : bool;
+	public function handleClientboundStonecutterSetRecipe(ClientboundStonecutterSetRecipePacket $packet) : bool;
+	public function handleServerboundCursorItemDrag(ServerboundCursorItemDragPacket $packet) : bool;
 }
