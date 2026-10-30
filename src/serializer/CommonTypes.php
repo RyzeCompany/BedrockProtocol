@@ -122,7 +122,7 @@ final class CommonTypes{
 	/** @throws DataDecodeException */
 	public static function getSkin(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : SkinData{
 		$skinId = self::getString($in);
-		$skinPlayFabId = self::getString($in);
+		$skinPlayFabId = $protocolId >= ProtocolInfo::PROTOCOL_1_26_60 ? "" : self::getString($in);
 		$skinResourcePatch = self::getString($in);
 		$skinData = self::getSkinImage($in);
 		$animationCount = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? VarInt::readUnsignedInt($in) : LE::readUnsignedInt($in);
@@ -220,7 +220,9 @@ final class CommonTypes{
 
 	public static function putSkin(ByteBufferWriter $out, SkinData $skin, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		self::putString($out, $skin->getSkinId());
-		self::putString($out, $skin->getPlayFabId());
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_60){
+			self::putString($out, $skin->getPlayFabId());
+		}
 		self::putString($out, $skin->getResourcePatch());
 		self::putSkinImage($out, $skin->getSkinImage());
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
