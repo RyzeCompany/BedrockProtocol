@@ -36,13 +36,19 @@ class AnimatePacket extends DataPacket implements ClientboundPacket, Serverbound
 	public int $actorRuntimeId;
 	public float $data = 0.0;
 	public ?string $swingSource = null;
+	/** 2225+: 0 mainhand, 1 offhand. */
+	public int $hand = 0;
 
-	public static function create(int $actorRuntimeId, int $action, float $data = 0.0, ?string $swingSource = null) : self{
+	public static function create(int $actorRuntimeId, int $action, float $data = 0.0, ?string $swingSource = null, int $hand = 0) : self{
 		$result = new self;
 		$result->actorRuntimeId = $actorRuntimeId;
 		$result->action = $action;
 		$result->data = $data;
 		$result->swingSource = $swingSource;
+		if($hand !== 0 && $hand !== 1){
+			throw new \InvalidArgumentException("Invalid animation hand $hand");
+		}
+		$result->hand = $hand;
 		return $result;
 	}
 
@@ -65,6 +71,12 @@ class AnimatePacket extends DataPacket implements ClientboundPacket, Serverbound
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
 			$this->swingSource = CommonTypes::readOptional($in, CommonTypes::getString(...));
 		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			$this->hand = Byte::readUnsigned($in);
+			if($this->hand > 1){
+				throw new PacketDecodeException("Invalid animation hand " . $this->hand);
+			}
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -79,6 +91,9 @@ class AnimatePacket extends DataPacket implements ClientboundPacket, Serverbound
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
 			CommonTypes::writeOptional($out, $this->swingSource, CommonTypes::putString(...));
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			Byte::writeUnsigned($out, $this->hand);
 		}
 	}
 
