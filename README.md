@@ -1,9 +1,19 @@
 # BedrockProtocol
-[![CI](https://github.com/RyzeMCBE/BedrockProtocol/actions/workflows/ci.yml/badge.svg)](https://github.com/RyzeMCBE/BedrockProtocol/actions/workflows/ci.yml)
+[![CI](https://github.com/RyzeCompany/BedrockProtocol/actions/workflows/ci.yml/badge.svg)](https://github.com/RyzeCompany/BedrockProtocol/actions/workflows/ci.yml)
 
 An implementation of the Minecraft: Bedrock Edition protocol in PHP
 
 This library implements all of the packets in the Minecraft: Bedrock Edition protocol, as well as a few extra things needed to support them.
+
+## Install with Composer
+
+Published package: [ryzemcbe/bedrock-protocol](https://packagist.org/packages/ryzemcbe/bedrock-protocol).
+
+```bash
+composer require ryzemcbe/bedrock-protocol:1.0.0-beta.1
+```
+
+In a clone of this repository, run `composer install` to install development dependencies before running the tests. PHP namespaces remain `pocketmine\\network\\mcpe\\protocol\\` for compatibility with existing consumers. Future releases are versioned using Git tags and synchronized with Packagist (enable the Packagist GitHub hook if not already connected).
 However, at the time of writing, it does _not_ include the following:
 - Anything related to JWT handling/verification
 - Anything related to encryption
@@ -44,5 +54,5 @@ If you want to improve BedrockProtocol, please open issues with suggestions, or 
 
 ## RyzeMCBE project stewardship
 
-This repository is maintained by [RyzeMCBE](https://github.com/RyzeMCBE) as a dependency of [RyzeMP](https://github.com/RyzeMCBE/RyzeMP).
+This repository is maintained by [RyzeCompany](https://github.com/RyzeCompany) as a dependency of [RyzeMP](https://github.com/RyzeCompany/RyzeMP).
 The original upstream contributors, source licenses, and compatibility-oriented PHP namespaces remain acknowledged and unchanged.
