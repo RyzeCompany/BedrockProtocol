@@ -499,4 +499,6 @@ interface PacketHandlerInterface{
 	public function handleClientboundStonecutterSetRecipe(ClientboundStonecutterSetRecipePacket $packet) : bool;
 	public function handleServerboundCursorItemDrag(ServerboundCursorItemDragPacket $packet) : bool;
 	public function handleServerboundMatchmakingCancel(ServerboundMatchmakingCancelPacket $packet) : bool;
+	public function handleClientboundMatchmakingState(ClientboundMatchmakingStatePacket $packet) : bool;
+	public function handleSetPassengerOfBlock(SetPassengerOfBlockPacket $packet) : bool;
 }
