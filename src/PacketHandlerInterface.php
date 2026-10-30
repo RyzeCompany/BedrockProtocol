@@ -501,4 +501,5 @@ interface PacketHandlerInterface{
 	public function handleServerboundMatchmakingCancel(ServerboundMatchmakingCancelPacket $packet) : bool;
 	public function handleClientboundMatchmakingState(ClientboundMatchmakingStatePacket $packet) : bool;
 	public function handleSetPassengerOfBlock(SetPassengerOfBlockPacket $packet) : bool;
+	public function handleServerboundRegisterAudioContent(ServerboundRegisterAudioContentPacket $packet) : bool;
 }
