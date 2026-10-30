@@ -86,4 +86,42 @@ final class Protocol2225PacketTest extends TestCase{
 		self::assertTrue($newPacket->isClientBiomeUpdate());
 	}
 
+	public function testMatchmakingStateWithNestedOptions() : void{
+		$this->assertRoundTrip(
+			ClientboundMatchmakingStatePacket::create(2, "play.example.net", ["Player", false]),
+			function(ClientboundMatchmakingStatePacket $p) : void{
+				self::assertSame(2, $p->getState());
+				self::assertSame("play.example.net", $p->getDestinationName());
+				self::assertSame(["Player", false], $p->getOptions());
+			}
+		);
+	}
+
+	public function testBlockPassengerStartStop() : void{
+		$this->assertRoundTrip(
+			SetPassengerOfBlockPacket::create(54321),
+			function(SetPassengerOfBlockPacket $p) : void{
+				self::assertSame(54321, $p->getPassenger());
+				self::assertNull($p->getPosition());
+				self::assertNull($p->getOffset());
+			}
+		);
+		$this->assertRoundTrip(
+			SetPassengerOfBlockPacket::create(
+				54321,
+				new \pocketmine\network\mcpe\protocol\types\BlockPosition(5, 75, -2),
+				new \pocketmine\math\Vector3(1.0, 1.25, 0.0),
+				90.0, 35.0, 1
+			),
+			function(SetPassengerOfBlockPacket $p) : void{
+				self::assertSame(54321, $p->getPassenger());
+				self::assertNotNull($p->getPosition());
+				self::assertSame(5, $p->getPosition()->getX());
+				self::assertSame(75, $p->getPosition()->getY());
+				self::assertSame(-2, $p->getPosition()->getZ());
+				self::assertSame(1, $p->getEmoteType());
+			}
+		);
+	}
+
 }
