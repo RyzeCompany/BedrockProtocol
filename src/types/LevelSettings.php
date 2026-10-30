@@ -37,6 +37,8 @@ final class LevelSettings{
 	public int $editorWorldType = EditorWorldType::NON_EDITOR;
 	public bool $createdInEditorMode = false;
 	public bool $exportedFromEditorMode = false;
+	/** Added in Bedrock protocol 2225: 0 = Legacy, 1 = Editor Achievements migrated. */
+	public int $editorLevelMigrationVersion = 0;
 	public int $time = -1;
 	public int $eduEditionOffer = EducationEditionOffer::NONE;
 	public bool $hasEduFeaturesEnabled = false;
@@ -113,6 +115,12 @@ final class LevelSettings{
 		$this->editorWorldType = $protocolId >= ProtocolInfo::PROTOCOL_1_20_30 ? VarInt::readSignedInt($in) : (CommonTypes::getBool($in) ? EditorWorldType::PROJECT : EditorWorldType::NON_EDITOR);
 		$this->createdInEditorMode = CommonTypes::getBool($in);
 		$this->exportedFromEditorMode = CommonTypes::getBool($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			$this->editorLevelMigrationVersion = Byte::readUnsigned($in);
+			if($this->editorLevelMigrationVersion > 1){
+				throw new PacketDecodeException("Unexpected editor level migration version " . $this->editorLevelMigrationVersion);
+			}
+		}
 		$this->time = VarInt::readSignedInt($in);
 		$this->eduEditionOffer = VarInt::readSignedInt($in);
 		$this->hasEduFeaturesEnabled = CommonTypes::getBool($in);
@@ -181,6 +189,12 @@ final class LevelSettings{
 		}
 		CommonTypes::putBool($out, $this->createdInEditorMode);
 		CommonTypes::putBool($out, $this->exportedFromEditorMode);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			if($this->editorLevelMigrationVersion < 0 || $this->editorLevelMigrationVersion > 1){
+				throw new \InvalidArgumentException("Invalid editor level migration version");
+			}
+			Byte::writeUnsigned($out, $this->editorLevelMigrationVersion);
+		}
 		VarInt::writeSignedInt($out, $this->time);
 		VarInt::writeSignedInt($out, $this->eduEditionOffer);
 		CommonTypes::putBool($out, $this->hasEduFeaturesEnabled);
