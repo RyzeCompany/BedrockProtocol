@@ -1,0 +1,36 @@
+name: One-time cleanup of merged Composer work branches
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-clean-merged-composer-branches.yml'
+permissions:
+  contents: write
+jobs:
+  remove-merged-branches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete only merged Composer branches with unchanged heads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          while read -r branch expected; do
+            [[ -z "${branch}" ]] && continue
+            ref="repos/${GITHUB_REPOSITORY}/git/ref/heads/${branch}"
+            if ! current="$(gh api "${ref}" --jq '.object.sha' 2>/dev/null)"; then
+              echo "SKIPPED missing branch: ${branch}"
+              continue
+            fi
+            if [[ "${current}" != "${expected}" ]]; then
+              echo "::error::Branch ${branch} has changed since merge, refusing deletion."
+              exit 1
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}"
+            echo "DELETED ${branch}"
+          done <<'MERGED_BRANCHES'
+chore/composer-packagist-direct 2b8f804000a6585ea26efc444a6f28c5f2960ad6
+chore/packagist-beta-distribution 469f943b4f5ba80e84715352d88a52a43ea9f103
+          MERGED_BRANCHES
