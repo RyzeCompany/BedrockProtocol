@@ -1000,4 +1000,8 @@ trait PacketHandlerDefaultImplTrait{
 		return false;
 	}
 
+	public function handleServerboundRegisterAudioContent(ServerboundRegisterAudioContentPacket $packet) : bool{
+		return false;
+	}
+
 }
