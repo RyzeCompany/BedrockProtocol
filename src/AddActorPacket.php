@@ -20,6 +20,7 @@ use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use pocketmine\network\mcpe\protocol\types\PassengerOfBlockArguments;
 use pocketmine\network\mcpe\protocol\types\entity\Attribute;
 use pocketmine\network\mcpe\protocol\types\entity\EntityLink;
 use pocketmine\network\mcpe\protocol\types\entity\MetadataProperty;
@@ -49,6 +50,8 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 	public PropertySyncData $syncedProperties;
 	/** @var EntityLink[] */
 	public array $links = [];
+	/** 2225+: optional block riding state, absent from older protocol versions. */
+	public ?PassengerOfBlockArguments $passengerBlockData = null;
 
 	/**
 	 * @generate-create-func
@@ -116,6 +119,9 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		for($i = 0; $i < $linkCount; ++$i){
 			$this->links[] = CommonTypes::getEntityLink($in, $protocolId);
 		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			$this->passengerBlockData = CommonTypes::readOptional($in, PassengerOfBlockArguments::read(...));
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -143,6 +149,11 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		VarInt::writeUnsignedInt($out, count($this->links));
 		foreach($this->links as $link){
 			CommonTypes::putEntityLink($out, $protocolId, $link);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			CommonTypes::writeOptional($out, $this->passengerBlockData, static function(ByteBufferWriter $out, PassengerOfBlockArguments $data) : void{
+				$data->write($out);
+			});
 		}
 	}
 
