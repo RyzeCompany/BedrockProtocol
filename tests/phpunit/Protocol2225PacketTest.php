@@ -150,4 +150,18 @@ final class Protocol2225PacketTest extends TestCase{
 		);
 	}
 
+	public function testNoneCompressionWireValueIsVersioned() : void{
+		$packet = NetworkSettingsPacket::create(0, \pocketmine\network\mcpe\protocol\types\CompressionAlgorithm::NONE, false, 0, 0.0);
+		foreach([ProtocolInfo::PROTOCOL_1_26_52 => "\x02\x00", ProtocolInfo::PROTOCOL_1_26_60 => "\xff\xff"] as $protocol => $expected){
+			$out = new ByteBufferWriter();
+			$packet->encode($out, $protocol);
+			$data = $out->getData();
+			// Uncompressed threshold uint16 followed by algorithm uint16.
+			self::assertSame($expected, substr($data, 4, 2));
+			$decoded = new NetworkSettingsPacket();
+			$decoded->decode(new ByteBufferReader($data), $protocol);
+			self::assertSame(\pocketmine\network\mcpe\protocol\types\CompressionAlgorithm::NONE, $decoded->getCompressionAlgorithm());
+		}
+	}
+
 }
