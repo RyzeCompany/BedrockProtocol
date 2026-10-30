@@ -77,7 +77,7 @@ final class Protocol2225PacketTest extends TestCase{
 		$chunk->encode($legacyBuffer, ProtocolInfo::PROTOCOL_1_26_52);
 		$newBuffer = new ByteBufferWriter();
 		$chunk->encode($newBuffer, ProtocolInfo::PROTOCOL_1_26_60);
-		self::assertSame($legacyBuffer->getData() . "\\x01", $newBuffer->getData());
+		self::assertSame($legacyBuffer->getData() . "\x01", $newBuffer->getData());
 		$oldPacket = new LevelChunkPacket();
 		$oldPacket->decode(new ByteBufferReader($legacyBuffer->getData()), ProtocolInfo::PROTOCOL_1_26_52);
 		self::assertFalse($oldPacket->isClientBiomeUpdate());
