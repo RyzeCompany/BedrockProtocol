@@ -992,4 +992,12 @@ trait PacketHandlerDefaultImplTrait{
 		return false;
 	}
 
+	public function handleClientboundMatchmakingState(ClientboundMatchmakingStatePacket $packet) : bool{
+		return false;
+	}
+
+	public function handleSetPassengerOfBlock(SetPassengerOfBlockPacket $packet) : bool{
+		return false;
+	}
+
 }
