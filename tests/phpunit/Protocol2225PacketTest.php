@@ -179,4 +179,36 @@ final class Protocol2225PacketTest extends TestCase{
 		self::assertSame(0, $legacyDecoded->hand);
 	}
 
+	public function testActorSpawnOptionalPassengerOnlyOn2225() : void{
+		$actor = AddActorPacket::create(
+			1, 11, "minecraft:cow",
+			new \pocketmine\math\Vector3(3.0, 4.0, 5.0),
+			new \pocketmine\math\Vector3(0.0, 0.0, 0.0),
+			0.0, 0.0, 0.0, 0.0, [], [],
+			new \pocketmine\network\mcpe\protocol\types\entity\PropertySyncData([], []),
+			[]
+		);
+		$old = new ByteBufferWriter();
+		$actor->encode($old, ProtocolInfo::PROTOCOL_1_26_52);
+		$noPassenger = new ByteBufferWriter();
+		$actor->encode($noPassenger, ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertSame($old->getData() . "\x00", $noPassenger->getData());
+
+		$passenger = new \pocketmine\network\mcpe\protocol\types\PassengerOfBlockArguments(
+			new \pocketmine\network\mcpe\protocol\types\BlockPosition(1, 64, 2),
+			new \pocketmine\math\Vector3(0.25, 0.75, 0.5),
+			90.0, 45.0, 1
+		);
+		$actor->passengerBlockData = $passenger;
+		$out = new ByteBufferWriter();
+		$actor->encode($out, ProtocolInfo::PROTOCOL_1_26_60);
+		$decoded = new AddActorPacket();
+		$decoded->decode(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertNotNull($decoded->passengerBlockData);
+		self::assertSame(1, $decoded->passengerBlockData->position->getX());
+		self::assertSame(64, $decoded->passengerBlockData->position->getY());
+		self::assertSame(2, $decoded->passengerBlockData->position->getZ());
+		self::assertSame(1, $decoded->passengerBlockData->emoteType);
+	}
+
 }
