@@ -977,4 +977,15 @@ trait PacketHandlerDefaultImplTrait{
 	public function handlePartyDestinationCookieResponse(PartyDestinationCookieResponsePacket $packet) : bool{
 		return false;
 	}
+	public function handleServerboundStonecutterSetRecipe(ServerboundStonecutterSetRecipePacket $packet) : bool{
+		return false;
+	}
+
+	public function handleClientboundStonecutterSetRecipe(ClientboundStonecutterSetRecipePacket $packet) : bool{
+		return false;
+	}
+
+	public function handleServerboundCursorItemDrag(ServerboundCursorItemDragPacket $packet) : bool{
+		return false;
+	}
 }
