@@ -164,4 +164,19 @@ final class Protocol2225PacketTest extends TestCase{
 		}
 	}
 
+	public function testAnimation2225AddsExactlyOneHandByte() : void{
+		$animation = AnimatePacket::create(11, AnimatePacket::ACTION_SWING_ARM, 0.0, "Attack", 1);
+		$old = new ByteBufferWriter();
+		$animation->encode($old, ProtocolInfo::PROTOCOL_1_26_52);
+		$modern = new ByteBufferWriter();
+		$animation->encode($modern, ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertSame($old->getData() . "\x01", $modern->getData());
+		$decoded = new AnimatePacket();
+		$decoded->decode(new ByteBufferReader($modern->getData()), ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertSame(1, $decoded->hand);
+		$legacyDecoded = new AnimatePacket();
+		$legacyDecoded->decode(new ByteBufferReader($old->getData()), ProtocolInfo::PROTOCOL_1_26_52);
+		self::assertSame(0, $legacyDecoded->hand);
+	}
+
 }
