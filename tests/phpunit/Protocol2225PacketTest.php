@@ -211,4 +211,29 @@ final class Protocol2225PacketTest extends TestCase{
 		self::assertSame(1, $decoded->passengerBlockData->emoteType);
 	}
 
+	public function testPlayerListMovesPlayFabOutOfSkinIn2225() : void{
+		$skin = new \pocketmine\network\mcpe\protocol\types\skin\SkinData(
+			"skin-1", "pfid-123", "{}", new \pocketmine\network\mcpe\protocol\types\skin\SkinImage(1, 1, "\xff\xff\xff\xff")
+		);
+		$entry = \pocketmine\network\mcpe\protocol\types\PlayerListEntry::createAdditionEntry(
+			\Ramsey\Uuid\Uuid::uuid4(), 12, "PlayerOne", $skin, "xuid-123"
+		);
+		$packet = PlayerListPacket::add([$entry]);
+		foreach([ProtocolInfo::PROTOCOL_1_26_52, ProtocolInfo::PROTOCOL_1_26_60] as $protocol){
+			$out = new ByteBufferWriter();
+			$packet->encode($out, $protocol);
+			$decoded = new PlayerListPacket();
+			$decoded->decode(new ByteBufferReader($out->getData()), $protocol);
+			self::assertCount(1, $decoded->entries);
+			self::assertSame("PlayerOne", $decoded->entries[0]->username);
+			self::assertSame("xuid-123", $decoded->entries[0]->xboxUserId);
+			if($protocol >= ProtocolInfo::PROTOCOL_1_26_60){
+				self::assertSame("pfid-123", $decoded->entries[0]->playFabId);
+				self::assertSame("", $decoded->entries[0]->skinData->getPlayFabId());
+			}else{
+				self::assertSame("pfid-123", $decoded->entries[0]->skinData->getPlayFabId());
+			}
+		}
+	}
+
 }
