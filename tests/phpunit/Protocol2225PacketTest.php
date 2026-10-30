@@ -236,4 +236,53 @@ final class Protocol2225PacketTest extends TestCase{
 		}
 	}
 
+	public function testLevelSettingsEditorMigrationOnlyAt2225() : void{
+		$settings = new \pocketmine\network\mcpe\protocol\types\LevelSettings();
+		$settings->seed = 123;
+		$settings->spawnSettings = new \pocketmine\network\mcpe\protocol\types\SpawnSettings(0, "", 0);
+		$settings->worldGamemode = 0;
+		$settings->difficulty = 1;
+		$settings->spawnPosition = new \pocketmine\network\mcpe\protocol\types\BlockPosition(0, 64, 0);
+		$settings->time = 6000;
+		$settings->rainLevel = 0.0;
+		$settings->lightningLevel = 0.0;
+		$settings->commandsEnabled = true;
+		$settings->experiments = new \pocketmine\network\mcpe\protocol\types\Experiments([], false);
+		$settings->editorLevelMigrationVersion = 1;
+		$telemetry = new \pocketmine\network\mcpe\protocol\types\ServerTelemetryData("", "", "", "");
+		$old = new ByteBufferWriter();
+		$settings->write($old, $telemetry, ProtocolInfo::PROTOCOL_1_26_52);
+		$new = new ByteBufferWriter();
+		$settings->write($new, $telemetry, ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertSame(strlen($old->getData()) + 1, strlen($new->getData()));
+		$legacyDecoded = \pocketmine\network\mcpe\protocol\types\LevelSettings::read(new ByteBufferReader($old->getData()), $telemetry, ProtocolInfo::PROTOCOL_1_26_52);
+		$modernDecoded = \pocketmine\network\mcpe\protocol\types\LevelSettings::read(new ByteBufferReader($new->getData()), $telemetry, ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertSame(0, $legacyDecoded->editorLevelMigrationVersion);
+		self::assertSame(1, $modernDecoded->editorLevelMigrationVersion);
+		self::assertSame(6000, $modernDecoded->time);
+	}
+
+	public function testItemReleaseOffhandOnlyAt2225() : void{
+		$tx = \pocketmine\network\mcpe\protocol\types\inventory\ReleaseItemTransactionData::new(
+			[],
+			\pocketmine\network\mcpe\protocol\types\inventory\ReleaseItemTransactionData::ACTION_RELEASE,
+			2,
+			\pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper::legacy(
+				\pocketmine\network\mcpe\protocol\types\inventory\ItemStack::null()
+			),
+			new \pocketmine\math\Vector3(1.0, 2.0, 3.0),
+			1
+		);
+		$packet = InventoryTransactionPacket::create(0, null, $tx);
+		$legacy = new ByteBufferWriter();
+		$packet->encode($legacy, ProtocolInfo::PROTOCOL_1_26_52);
+		$modern = new ByteBufferWriter();
+		$packet->encode($modern, ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertSame($legacy->getData() . "\x01", $modern->getData());
+		$decoded = new InventoryTransactionPacket();
+		$decoded->decode(new ByteBufferReader($modern->getData()), ProtocolInfo::PROTOCOL_1_26_60);
+		self::assertInstanceOf(\pocketmine\network\mcpe\protocol\types\inventory\ReleaseItemTransactionData::class, $decoded->trData);
+		self::assertSame(1, $decoded->trData->getHand());
+	}
+
 }
