@@ -282,6 +282,7 @@ class PacketPool{
 		$this->registerPacket(new ClientboundMatchmakingStatePacket());
 		$this->registerPacket(new SetPassengerOfBlockPacket());
 		$this->registerPacket(new ServerboundRegisterAudioContentPacket());
+		$this->registerPacket(new ClientboundPlayAudioContentPacket());
 	}
 
 	public function registerPacket(Packet $packet) : void{
