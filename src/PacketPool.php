@@ -281,6 +281,7 @@ class PacketPool{
 		$this->registerPacket(new ServerboundMatchmakingCancelPacket());
 		$this->registerPacket(new ClientboundMatchmakingStatePacket());
 		$this->registerPacket(new SetPassengerOfBlockPacket());
+		$this->registerPacket(new ServerboundRegisterAudioContentPacket());
 	}
 
 	public function registerPacket(Packet $packet) : void{
