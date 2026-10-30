@@ -124,4 +124,14 @@ final class Protocol2225PacketTest extends TestCase{
 		);
 	}
 
+	public function testSignedAudioContentRegistration() : void{
+		$entries = [['id' => 'audio-id', 'shared' => 'jwt-1', 'server' => 'jwt-2', 'playback' => 'jwt-3']];
+		$this->assertRoundTrip(
+			ServerboundRegisterAudioContentPacket::create($entries),
+			function(ServerboundRegisterAudioContentPacket $p) use($entries) : void{
+				self::assertSame($entries, $p->getRegistrations());
+			}
+		);
+	}
+
 }
