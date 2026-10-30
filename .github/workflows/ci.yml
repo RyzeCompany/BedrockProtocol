@@ -16,6 +16,9 @@ jobs:
           php-version: '8.4'
           install-path: ./bin
           pm-version-major: 5
-      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Validate Composer package manifest
+        run: composer validate --no-check-publish --no-interaction
+      - name: Install package dependencies with Composer
+        run: composer install --prefer-dist --no-interaction --no-progress
       - run: find src tests/phpunit -type f -name '*.php' -print0 | xargs -0 -n1 -P4 php -n -l
       - run: vendor/bin/phpunit --bootstrap vendor/autoload.php --fail-on-warning tests/phpunit
