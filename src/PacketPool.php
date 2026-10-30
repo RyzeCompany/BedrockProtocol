@@ -27,10 +27,6 @@ class PacketPool{
 			self::$instance = new self;
 		}
 		return self::$instance;
-		// New 2225 codecs; 2225 is not accepted until protocol and NetherNet are complete.
-		$this->registerPacket(new ServerboundStonecutterSetRecipePacket());
-		$this->registerPacket(new ClientboundStonecutterSetRecipePacket());
-		$this->registerPacket(new ServerboundCursorItemDragPacket());
 	}
 
 	/** @var \SplFixedArray<Packet> */
@@ -278,6 +274,10 @@ class PacketPool{
 		$this->registerPacket(new ClientboundUpdateSoundDataPacket());
 		$this->registerPacket(new SendPartyDestinationCookiePacket());
 		$this->registerPacket(new PartyDestinationCookieResponsePacket());
+		// 2225 packets are registered, but protocol 2225 is not yet accepted.
+		$this->registerPacket(new ServerboundStonecutterSetRecipePacket());
+		$this->registerPacket(new ClientboundStonecutterSetRecipePacket());
+		$this->registerPacket(new ServerboundCursorItemDragPacket());
 	}
 
 	public function registerPacket(Packet $packet) : void{
