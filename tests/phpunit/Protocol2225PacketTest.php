@@ -19,11 +19,15 @@ final class Protocol2225PacketTest extends TestCase{
 		$assertDecoded($packetById);
 	}
 
-	public function testVersionNotPrematurelyEnabled() : void{
+	public function testCurrentVersionAndLegacyProtocolsAreAdvertised() : void{
 		self::assertSame(2225, ProtocolInfo::PROTOCOL_1_26_60);
 		self::assertSame(2225, ProtocolInfo::PROTOCOL_1_26_61);
-		self::assertNotContains(2225, ProtocolInfo::ACCEPTED_PROTOCOL);
-		self::assertSame(2193, ProtocolInfo::CURRENT_PROTOCOL);
+		self::assertContains(2225, ProtocolInfo::ACCEPTED_PROTOCOL);
+		self::assertContains(2193, ProtocolInfo::ACCEPTED_PROTOCOL);
+		self::assertSame(2225, ProtocolInfo::CURRENT_PROTOCOL);
+		self::assertSame('v26.60', ProtocolInfo::MINECRAFT_VERSION);
+		self::assertSame('1.26.60', ProtocolInfo::MINECRAFT_VERSION_NETWORK);
+		self::assertSame(ProtocolInfo::ACCEPTED_PROTOCOL, array_values(array_unique(ProtocolInfo::ACCEPTED_PROTOCOL)));
 	}
 
 	public function testServerboundStonecutter() : void{
