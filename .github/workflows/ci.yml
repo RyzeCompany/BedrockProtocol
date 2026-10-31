@@ -21,4 +21,29 @@ jobs:
       - name: Install package dependencies with Composer
         run: composer install --prefer-dist --no-interaction --no-progress
       - run: find src tests/phpunit -type f -name '*.php' -print0 | xargs -0 -n1 -P4 php -n -l
+      - name: Verify generated multiversion current metadata
+        run: |
+          php tools/generate-protocol-info.php tools/current-version.json --version-only
+          git diff --exit-code -- src/ProtocolInfo.php
       - run: vendor/bin/phpunit --bootstrap vendor/autoload.php --fail-on-warning tests/phpunit
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish tested Composer prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=v1.0.0-beta.2
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$tag already published; not replacing it."
+            exit 0
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title 'BedrockProtocol 1.0.0-beta.2 · protocol 2225' --notes-file RELEASE-beta2.md

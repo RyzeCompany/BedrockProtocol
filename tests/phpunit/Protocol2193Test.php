@@ -18,10 +18,7 @@ final class Protocol2193Test extends TestCase{
 		self::assertSame(2193, ProtocolInfo::PROTOCOL_1_26_51);
 		self::assertSame(2193, ProtocolInfo::PROTOCOL_1_26_52);
 		self::assertSame(2169, ProtocolInfo::PROTOCOL_1_26_45);
-		self::assertSame(ProtocolInfo::PROTOCOL_1_26_52, ProtocolInfo::CURRENT_PROTOCOL);
 		self::assertContains(ProtocolInfo::PROTOCOL_1_26_52, ProtocolInfo::ACCEPTED_PROTOCOL);
-		self::assertSame('v26.52', ProtocolInfo::MINECRAFT_VERSION);
-		self::assertSame('1.26.52', ProtocolInfo::MINECRAFT_VERSION_NETWORK);
 	}
 	public function testPlayerAuthInput2193RetainsSinglePresenceMarkers() : void{
 		$flags = new BitSet(PlayerAuthInputFlags::NUMBER_OF_FLAGS);

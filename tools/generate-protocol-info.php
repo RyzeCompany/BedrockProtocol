@@ -467,6 +467,30 @@ if(!is_int($major) || !is_int($minor) || !is_int($patch) || !is_int($revision) |
 echo "Generating code basics for version $major.$minor.$patch.$revision " . ($beta ? "beta" : "") . " (protocol $protocolVersion)" . PHP_EOL;
 
 $packetToIdList = [];
+if(($argv[2] ?? null) === "--version-only"){
+	// Preserve the multiversion packet registry and aliases while selecting the
+	// tested current version. The upstream full generator is for single-version data.
+	$path = dirname(__DIR__) . '/src/ProtocolInfo.php';
+	$source = file_get_contents($path);
+	$alias = "PROTOCOL_{$major}_{$minor}_{$patch}";
+	if($source === false || !preg_match('/public const CURRENT_PROTOCOL = self::(PROTOCOL_[0-9_]+);/', $source, $current) ||
+		!str_contains($source, "public const $alias = $protocolVersion;")){
+		throw new \RuntimeException("Current multiversion protocol or target alias is missing");
+	}
+	if($current[1] !== $alias && preg_match('/public const ACCEPTED_PROTOCOL = \\[(.*?)\\];/s', $source, $accepted) &&
+		!str_contains($accepted[1], "self::{$current[1]},")){
+		$source = str_replace("self::CURRENT_PROTOCOL,", "self::{$current[1]},\n\t\tself::CURRENT_PROTOCOL,", $source);
+	}
+	$display = $major === 1 && $minor >= 26 ? "v$minor.$patch" : "v$major.$minor.$patch";
+	if($beta){$display .= ".$revision beta";}
+	$network = "$major.$minor.$patch" . ($beta ? ".$revision" : "");
+	$source = preg_replace('/public const CURRENT_PROTOCOL = self::PROTOCOL_[0-9_]+;/', "public const CURRENT_PROTOCOL = self::$alias;", $source, 1);
+	$source = preg_replace("/public const MINECRAFT_VERSION = '[^']+';/", "public const MINECRAFT_VERSION = '$display';", $source, 1);
+	$source = preg_replace("/public const MINECRAFT_VERSION_NETWORK = '[^']+';/", "public const MINECRAFT_VERSION_NETWORK = '$network';", $source, 1);
+	file_put_contents($path, $source);
+	echo "Updated multiversion current metadata to $network ($protocolVersion)\n";
+	exit(0);
+}
 foreach($json["packets"] as $name => $id){
 	if(!is_string($name) || !is_int($id)){
 		fwrite(STDERR, "Invalid packet entry \"$name\", expected string => int" . PHP_EOL);

@@ -274,6 +274,15 @@ class PacketPool{
 		$this->registerPacket(new ClientboundUpdateSoundDataPacket());
 		$this->registerPacket(new SendPartyDestinationCookiePacket());
 		$this->registerPacket(new PartyDestinationCookieResponsePacket());
+		// 2225 packets are registered, but protocol 2225 is not yet accepted.
+		$this->registerPacket(new ServerboundStonecutterSetRecipePacket());
+		$this->registerPacket(new ClientboundStonecutterSetRecipePacket());
+		$this->registerPacket(new ServerboundCursorItemDragPacket());
+		$this->registerPacket(new ServerboundMatchmakingCancelPacket());
+		$this->registerPacket(new ClientboundMatchmakingStatePacket());
+		$this->registerPacket(new SetPassengerOfBlockPacket());
+		$this->registerPacket(new ServerboundRegisterAudioContentPacket());
+		$this->registerPacket(new ClientboundPlayAudioContentPacket());
 	}
 
 	public function registerPacket(Packet $packet) : void{

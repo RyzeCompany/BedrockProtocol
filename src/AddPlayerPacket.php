@@ -20,6 +20,7 @@ use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use pocketmine\network\mcpe\protocol\types\PassengerOfBlockArguments;
 use pocketmine\network\mcpe\protocol\types\DeviceOS;
 use pocketmine\network\mcpe\protocol\types\entity\EntityLink;
 use pocketmine\network\mcpe\protocol\types\entity\MetadataProperty;
@@ -53,6 +54,8 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 
 	/** @var EntityLink[] */
 	public array $links = [];
+	/** 2225+: optional block riding state, absent from older protocol versions. */
+	public ?PassengerOfBlockArguments $passengerBlockData = null;
 	public string $deviceId = ""; //TODO: fill player's device ID (???)
 	public int $buildPlatform = DeviceOS::UNKNOWN;
 
@@ -125,6 +128,10 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 			$this->links[$i] = CommonTypes::getEntityLink($in, $protocolId);
 		}
 
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			$this->passengerBlockData = CommonTypes::readOptional($in, PassengerOfBlockArguments::read(...));
+		}
+
 		$this->deviceId = CommonTypes::getString($in);
 		$this->buildPlatform = LE::readSignedInt($in);
 	}
@@ -149,6 +156,12 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		VarInt::writeUnsignedInt($out, count($this->links));
 		foreach($this->links as $link){
 			CommonTypes::putEntityLink($out, $protocolId, $link);
+		}
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+			CommonTypes::writeOptional($out, $this->passengerBlockData, static function(ByteBufferWriter $out, PassengerOfBlockArguments $data) : void{
+				$data->write($out);
+			});
 		}
 
 		CommonTypes::putString($out, $this->deviceId);
