@@ -56,9 +56,9 @@ final class ItemStackRequestActionVersionTest extends TestCase{
 			// Before protocol 2168, only the inner ID was sent.
 			[ProtocolInfo::PROTOCOL_1_26_30, null, 19, null, 18],
 			// Protocols 2168/2169/2193 share the original outer/inner mapping.
-			[ProtocolInfo::PROTOCOL_1_26_40, 17, 19, 16, 18],
-			[ProtocolInfo::PROTOCOL_1_26_45, 17, 19, 16, 18],
-			[ProtocolInfo::PROTOCOL_1_26_52, 17, 19, 16, 18],
+			[ProtocolInfo::PROTOCOL_1_26_40, 17, 17, 16, 16],
+			[ProtocolInfo::PROTOCOL_1_26_45, 17, 17, 16, 16],
+			[ProtocolInfo::PROTOCOL_1_26_52, 17, 17, 16, 16],
 			// 2225 adds the reserved action, shifting these variant and wire IDs.
 			[ProtocolInfo::PROTOCOL_1_26_60, 18, 20, 17, 19],
 		] as [$protocol, $resultsOuter, $resultsInner, $nonImplementedOuter, $nonImplementedInner]){
@@ -69,8 +69,8 @@ final class ItemStackRequestActionVersionTest extends TestCase{
 
 	public function testCommonActionRetainsVersionSpecificMapping() : void{
 		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_30, new LabTableCombineStackRequestAction(), null, 9);
-		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_40, new LabTableCombineStackRequestAction(), 7, 9);
-		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_52, new LabTableCombineStackRequestAction(), 7, 9);
+		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_40, new LabTableCombineStackRequestAction(), 7, 7);
+		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_52, new LabTableCombineStackRequestAction(), 7, 7);
 		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_60, new LabTableCombineStackRequestAction(), 7, 9);
 	}
 
@@ -85,6 +85,11 @@ final class ItemStackRequestActionVersionTest extends TestCase{
 			ItemStackRequestActionType::INTERNAL_TYPES_1_26_60[18]
 		);
 		self::assertCount(18, ItemStackRequestActionType::INNER_TYPES_1_26_40);
+		self::assertSame(range(0, 17), ItemStackRequestActionType::WIRE_TYPES_1_26_40);
+		self::assertSame(
+			ItemStackRequestActionType::CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING,
+			ItemStackRequestActionType::INNER_TYPES_1_26_40[17]
+		);
 	}
 
 	public function testReservedActionOnlyExistsInProtocol2225() : void{
@@ -104,6 +109,17 @@ final class ItemStackRequestActionVersionTest extends TestCase{
 		Byte::writeUnsigned($out, 19);
 		$this->expectException(PacketDecodeException::class);
 		ItemStackRequest::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_60);
+	}
+
+	public function testProtocol2193RejectsLegacyInternalIdOnWire() : void{
+		// 2193 now carries CraftResults as inner ID 17, not the PHP class ID 19.
+		$out = new ByteBufferWriter();
+		CommonTypes::writeItemStackRequestId($out, 7);
+		VarInt::writeUnsignedInt($out, 1);
+		VarInt::writeUnsignedInt($out, 17);
+		Byte::writeUnsigned($out, 19);
+		$this->expectException(PacketDecodeException::class);
+		ItemStackRequest::read(new ByteBufferReader($out->getData()), ProtocolInfo::PROTOCOL_1_26_52);
 	}
 
 	public function testProtocol2193RejectsProtocol2225ActionId() : void{
