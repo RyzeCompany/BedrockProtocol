@@ -95,8 +95,8 @@ final class ItemStackRequest{
 					$expectedWireTypeId = ItemStackRequestActionType::WIRE_TYPES_1_26_60[$outerTypeId] ?? null;
 					$internalTypeId = ItemStackRequestActionType::INTERNAL_TYPES_1_26_60[$outerTypeId] ?? null;
 				}else{
-					$expectedWireTypeId = ItemStackRequestActionType::INNER_TYPES_1_26_40[$outerTypeId] ?? null;
-					$internalTypeId = $expectedWireTypeId;
+					$expectedWireTypeId = ItemStackRequestActionType::WIRE_TYPES_1_26_40[$outerTypeId] ?? null;
+					$internalTypeId = ItemStackRequestActionType::INNER_TYPES_1_26_40[$outerTypeId] ?? null;
 				}
 				if($expectedWireTypeId === null || $expectedWireTypeId !== $typeId || $internalTypeId === null){
 					throw new PacketDecodeException("ItemStackRequestAction type mismatch: outer type $outerTypeId, inner type $typeId");
@@ -132,7 +132,7 @@ final class ItemStackRequest{
 				if($outerTypeId === false){
 					throw new \InvalidArgumentException("Item stack request action type $typeId is unsupported by protocol $protocolId");
 				}
-				$wireTypeId = $typeId;
+				$wireTypeId = ItemStackRequestActionType::WIRE_TYPES_1_26_40[$outerTypeId];
 				VarInt::writeUnsignedInt($out, $outerTypeId);
 			}else{
 				$wireTypeId = $typeId;
