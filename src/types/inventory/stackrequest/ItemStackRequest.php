@@ -71,6 +71,7 @@ final class ItemStackRequest{
 			BeaconPaymentStackRequestAction::ID => BeaconPaymentStackRequestAction::read($in, $protocolId),
 			MineBlockStackRequestAction::ID => MineBlockStackRequestAction::read($in, $protocolId),
 			CraftRecipeStackRequestAction::ID => CraftRecipeStackRequestAction::read($in, $protocolId),
+			CraftReservedStackRequestAction::ID => CraftReservedStackRequestAction::read($in, $protocolId),
 			CraftRecipeAutoStackRequestAction::ID => CraftRecipeAutoStackRequestAction::read($in, $protocolId),
 			CreativeCreateStackRequestAction::ID => CreativeCreateStackRequestAction::read($in, $protocolId),
 			CraftRecipeOptionalStackRequestAction::ID => CraftRecipeOptionalStackRequestAction::read($in, $protocolId),
@@ -89,10 +90,18 @@ final class ItemStackRequest{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 				$outerTypeId = VarInt::readUnsignedInt($in);
 				$typeId = Byte::readUnsigned($in);
-				$expectedTypeId = ItemStackRequestActionType::INNER_TYPES_1_26_40[$outerTypeId] ?? null;
-				if($expectedTypeId === null || $expectedTypeId !== $typeId){
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+					// 2225 separates the oneOf variant from the versioned wire action ID.
+					$expectedWireTypeId = ItemStackRequestActionType::WIRE_TYPES_1_26_60[$outerTypeId] ?? null;
+					$internalTypeId = ItemStackRequestActionType::INTERNAL_TYPES_1_26_60[$outerTypeId] ?? null;
+				}else{
+					$expectedWireTypeId = ItemStackRequestActionType::INNER_TYPES_1_26_40[$outerTypeId] ?? null;
+					$internalTypeId = $expectedWireTypeId;
+				}
+				if($expectedWireTypeId === null || $expectedWireTypeId !== $typeId || $internalTypeId === null){
 					throw new PacketDecodeException("ItemStackRequestAction type mismatch: outer type $outerTypeId, inner type $typeId");
 				}
+				$typeId = $internalTypeId;
 			}else{
 				$typeId = Byte::readUnsigned($in);
 			}
@@ -111,14 +120,24 @@ final class ItemStackRequest{
 		VarInt::writeUnsignedInt($out, count($this->actions));
 		foreach($this->actions as $action){
 			$typeId = $action->getTypeId();
-			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_60){
+				$outerTypeId = array_search($typeId, ItemStackRequestActionType::INTERNAL_TYPES_1_26_60, true);
+				if($outerTypeId === false){
+					throw new \InvalidArgumentException("Item stack request action type $typeId is unsupported by protocol $protocolId");
+				}
+				$wireTypeId = ItemStackRequestActionType::WIRE_TYPES_1_26_60[$outerTypeId];
+				VarInt::writeUnsignedInt($out, $outerTypeId);
+			}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 				$outerTypeId = array_search($typeId, ItemStackRequestActionType::INNER_TYPES_1_26_40, true);
 				if($outerTypeId === false){
 					throw new \InvalidArgumentException("Item stack request action type $typeId is unsupported by protocol $protocolId");
 				}
+				$wireTypeId = $typeId;
 				VarInt::writeUnsignedInt($out, $outerTypeId);
+			}else{
+				$wireTypeId = $typeId;
 			}
-			Byte::writeUnsigned($out, $typeId);
+			Byte::writeUnsigned($out, $wireTypeId);
 			$action->write($out, $protocolId);
 		}
 		VarInt::writeUnsignedInt($out, count($this->filterStrings));
