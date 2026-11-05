@@ -67,6 +67,16 @@ final class ItemStackRequestActionVersionTest extends TestCase{
 		}
 	}
 
+	public function testCraftResultsAcrossAllAdvertisedProtocolVersions() : void{
+		foreach(array_unique(ProtocolInfo::ACCEPTED_PROTOCOL) as $protocol){
+			$outer = $protocol >= ProtocolInfo::PROTOCOL_1_26_60 ? 18
+				: ($protocol >= ProtocolInfo::PROTOCOL_1_26_40 ? 17 : null);
+			$inner = $protocol >= ProtocolInfo::PROTOCOL_1_26_60 ? 20
+				: ($protocol >= ProtocolInfo::PROTOCOL_1_26_40 ? 17 : 19);
+			$this->assertWireAction($protocol, new DeprecatedCraftingResultsStackRequestAction([], 1), $outer, $inner);
+		}
+	}
+
 	public function testCommonActionRetainsVersionSpecificMapping() : void{
 		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_30, new LabTableCombineStackRequestAction(), null, 9);
 		$this->assertWireAction(ProtocolInfo::PROTOCOL_1_26_40, new LabTableCombineStackRequestAction(), 7, 7);
