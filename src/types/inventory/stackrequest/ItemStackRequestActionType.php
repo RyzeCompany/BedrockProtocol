@@ -40,7 +40,13 @@ final class ItemStackRequestActionType{
 	public const CRAFTING_LOOM = 17;
 	public const CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING = 18;
 	public const CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING = 19; //no idea what this is for
+	// Internal type used by the new 1.26.60 CraftReservedAction (wire type 18).
+	public const CRAFTING_RESERVED = 20;
 
+	/**
+	 * Internal PHP action IDs for 2168/2169/2193, whose wire IDs no longer
+	 * include the bundle actions. Kept as the historical public constant.
+	 */
 	public const INNER_TYPES_1_26_40 = [
 		0 => self::TAKE,
 		1 => self::PLACE,
@@ -60,5 +66,69 @@ final class ItemStackRequestActionType{
 		15 => self::CRAFTING_LOOM,
 		16 => self::CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING,
 		17 => self::CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING
+	];
+
+	/**
+	 * Bedrock 1.26.40 through 1.26.52 uses contiguous wire IDs 0..17,
+	 * differing from the PHP action class IDs at entries 7..17.
+	 * @see https://mojang.github.io/bedrock-protocol-docs/1.26.50/types/item-stack-request-action-type/
+	 */
+	public const WIRE_TYPES_1_26_40 = [
+		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
+	];
+
+	/**
+	 * 1.26.60 adds a reserved crafting action and renumbers the wire action IDs.
+	 * The values in this array are INTERNAL IDs used by the existing PHP action classes;
+	 * their wire IDs are versioned independently below.
+	 * Index = oneOf variant (outer type), value = internal action type.
+	 */
+	public const INTERNAL_TYPES_1_26_60 = [
+		0 => self::TAKE,
+		1 => self::PLACE,
+		2 => self::SWAP,
+		3 => self::DROP,
+		4 => self::DESTROY,
+		5 => self::CRAFTING_CONSUME_INPUT,
+		6 => self::CRAFTING_CREATE_SPECIFIC_RESULT,
+		7 => self::LAB_TABLE_COMBINE,
+		8 => self::BEACON_PAYMENT,
+		9 => self::MINE_BLOCK,
+		10 => self::CRAFTING_RECIPE,
+		11 => self::CRAFTING_RECIPE_AUTO,
+		12 => self::CREATIVE_CREATE,
+		13 => self::CRAFTING_RECIPE_OPTIONAL,
+		14 => self::CRAFTING_GRINDSTONE,
+		15 => self::CRAFTING_LOOM,
+		16 => self::CRAFTING_RESERVED,
+		17 => self::CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING,
+		18 => self::CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING
+	];
+
+	/**
+	 * Official 2225 wire IDs, indexed by the oneOf variant index.
+	 * 7 and 8 are absent because bundle actions are not present in the wire enum.
+	 * @see https://mojang.github.io/bedrock-protocol-docs/1.26.60/types/item-stack-request-action-type/
+	 */
+	public const WIRE_TYPES_1_26_60 = [
+		0 => 0,
+		1 => 1,
+		2 => 2,
+		3 => 3,
+		4 => 4,
+		5 => 5,
+		6 => 6,
+		7 => 9,
+		8 => 10,
+		9 => 11,
+		10 => 12,
+		11 => 13,
+		12 => 14,
+		13 => 15,
+		14 => 16,
+		15 => 17,
+		16 => 18,
+		17 => 19,
+		18 => 20
 	];
 }
