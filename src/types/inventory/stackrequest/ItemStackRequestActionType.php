@@ -43,6 +43,10 @@ final class ItemStackRequestActionType{
 	// Internal type used by the new 1.26.60 CraftReservedAction (wire type 18).
 	public const CRAFTING_RESERVED = 20;
 
+	/**
+	 * Internal PHP action IDs for 2168/2169/2193, whose wire IDs no longer
+	 * include the bundle actions. Kept as the historical public constant.
+	 */
 	public const INNER_TYPES_1_26_40 = [
 		0 => self::TAKE,
 		1 => self::PLACE,
@@ -62,6 +66,15 @@ final class ItemStackRequestActionType{
 		15 => self::CRAFTING_LOOM,
 		16 => self::CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING,
 		17 => self::CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING
+	];
+
+	/**
+	 * Bedrock 1.26.40 through 1.26.52 uses contiguous wire IDs 0..17,
+	 * differing from the PHP action class IDs at entries 7..17.
+	 * @see https://mojang.github.io/bedrock-protocol-docs/1.26.50/types/item-stack-request-action-type/
+	 */
+	public const WIRE_TYPES_1_26_40 = [
+		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
 	];
 
 	/**
